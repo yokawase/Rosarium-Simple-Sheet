@@ -42,3 +42,11 @@ export interface GardenData {
 
 // View State
 export type ViewMode = 'sheet' | 'dashboard' | 'album';
+
+// App Settings
+export type FontSize = 'normal' | 'large' | 'xl';
+
+export interface AppSettings {
+  fontSize: FontSize;
+  highContrast: boolean; // True = Black text, False = Default design
+}

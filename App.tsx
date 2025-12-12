@@ -1,19 +1,60 @@
-import React, { useState } from 'react';
-import { Flower, BarChart3, Grid, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Flower, BarChart3, Grid, Image as ImageIcon, Settings as SettingsIcon } from 'lucide-react';
 import { Sheet } from './components/Sheet';
 import { Dashboard } from './components/Dashboard';
 import { Album } from './components/Album';
-import { RoseFormModal, CareModal } from './components/Modals';
-import { Rose, CareEvent, ViewMode } from './types';
-import { INITIAL_ROSES, generateMockEvents, CARE_TYPES } from './constants';
+import { RoseFormModal, CareModal, SettingsModal } from './components/Modals';
+import { Rose, CareEvent, ViewMode, AppSettings } from './types';
+import { INITIAL_ROSES, CARE_TYPES } from './constants';
+
+const STORAGE_KEY = 'rosarium_data_v1';
+
+interface StoredData {
+  roses: Rose[];
+  events: CareEvent[];
+  settings: AppSettings;
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  fontSize: 'normal',
+  highContrast: false,
+};
 
 const App: React.FC = () => {
-  // --- Global State ---
+  // --- Global State & Persistence ---
+  
+  // Initialize state from LocalStorage or Defaults
+  const [dataLoaded, setDataLoaded] = useState(false);
+  
   const [view, setView] = useState<ViewMode>('sheet');
   const [roses, setRoses] = useState<Rose[]>(INITIAL_ROSES);
-  
-  // NOTE: Start with empty events for a clean slate
   const [events, setEvents] = useState<CareEvent[]>([]);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+
+  // Load on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed: StoredData = JSON.parse(stored);
+        if (parsed.roses) setRoses(parsed.roses);
+        if (parsed.events) setEvents(parsed.events);
+        if (parsed.settings) setSettings(parsed.settings);
+      }
+    } catch (e) {
+      console.error("Failed to load data", e);
+    } finally {
+      setDataLoaded(true);
+    }
+  }, []);
+
+  // Save on change
+  useEffect(() => {
+    if (!dataLoaded) return; // Don't save before initial load finishes
+    const data: StoredData = { roses, events, settings };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [roses, events, settings, dataLoaded]);
+
   
   // --- Modal State ---
   const [isRoseModalOpen, setRoseModalOpen] = useState(false);
@@ -21,6 +62,8 @@ const App: React.FC = () => {
 
   const [isCareModalOpen, setCareModalOpen] = useState(false);
   const [careContext, setCareContext] = useState<{year: number, month: number, rose: Rose | null}>({ year: 0, month: 0, rose: null });
+
+  const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
 
   // --- Handlers ---
 
@@ -67,8 +110,59 @@ const App: React.FC = () => {
     return events.filter(e => e.roseId === careContext.rose?.id && e.date.startsWith(prefix));
   };
 
+  // --- Styles Logic ---
+  const getScaleClass = () => {
+    switch(settings.fontSize) {
+      case 'large': return 'text-[112.5%]'; // Approx 18px base
+      case 'xl': return 'text-[125%]'; // Approx 20px base
+      default: return 'text-[100%]'; // 16px base
+    }
+  };
+
+  const highContrastStyles = settings.highContrast ? {
+    color: '#000000',
+    '--text-main': '#000000',
+    '--text-muted': '#000000',
+  } as React.CSSProperties : {};
+
+  // Inject a global style for High Contrast overrides if needed
+  const highContrastClass = settings.highContrast ? "high-contrast-mode" : "";
+
   return (
-    <div className="h-screen flex flex-col bg-[#FDFBF7]">
+    <div 
+      className={`h-screen flex flex-col bg-[#FDFBF7] transition-all duration-300 ${getScaleClass()} ${highContrastClass}`}
+      style={highContrastStyles}
+    >
+      {/* High Contrast Global Overrides */}
+      {settings.highContrast && (
+        <style>{`
+          .high-contrast-mode .text-gray-400, 
+          .high-contrast-mode .text-gray-500, 
+          .high-contrast-mode .text-gray-600,
+          .high-contrast-mode .text-gray-700,
+          .high-contrast-mode .text-green-700,
+          .high-contrast-mode .text-green-800 { 
+            color: #000000 !important; 
+          }
+          .high-contrast-mode .border-gray-100,
+          .high-contrast-mode .border-gray-200,
+          .high-contrast-mode .border-gray-300 {
+            border-color: #000000 !important;
+          }
+          .high-contrast-mode .bg-white {
+            background-color: #ffffff !important;
+          }
+          .high-contrast-mode .bg-[#FDFBF7] {
+            background-color: #ffffff !important;
+          }
+          /* Keep colored badges legible but high contrast borders */
+          .high-contrast-mode .rounded-full, 
+          .high-contrast-mode .rounded-md {
+             border: 1px solid #000 !important;
+          }
+        `}</style>
+      )}
+
       {/* --- Header --- */}
       <header className="flex-none px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-white/80 backdrop-blur-sm z-50 sticky top-0">
         <div className="flex items-center space-x-3 group cursor-pointer" onClick={() => setView('sheet')}>
@@ -77,43 +171,53 @@ const App: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-serif font-semibold text-gray-800 tracking-tight leading-none">Rosarium</h1>
-            <span className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-medium hidden sm:block mt-1">Infinite Garden Log</span>
+            <span className="text-[10px] opacity-60 uppercase tracking-[0.2em] font-medium hidden sm:block mt-1">Infinite Garden Log</span>
           </div>
         </div>
 
-        <nav className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
-          <button 
-            onClick={() => setView('sheet')}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'sheet' ? 'bg-white text-green-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <Grid size={16} />
-            <span className="hidden md:inline">SHEET</span>
-          </button>
-          <button 
-            onClick={() => setView('dashboard')}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'dashboard' ? 'bg-white text-green-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <BarChart3 size={16} />
-            <span className="hidden md:inline">ANALYSIS</span>
-          </button>
-           <button 
-            onClick={() => setView('album')}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'album' ? 'bg-white text-green-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <ImageIcon size={16} />
-            <span className="hidden md:inline">ALBUM</span>
-          </button>
-        </nav>
+        <div className="flex items-center space-x-2">
+            <nav className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+            <button 
+                onClick={() => setView('sheet')}
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'sheet' ? 'bg-white text-green-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+                <Grid size={16} />
+                <span className="hidden md:inline">SHEET</span>
+            </button>
+            <button 
+                onClick={() => setView('dashboard')}
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'dashboard' ? 'bg-white text-green-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+                <BarChart3 size={16} />
+                <span className="hidden md:inline">ANALYSIS</span>
+            </button>
+            <button 
+                onClick={() => setView('album')}
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'album' ? 'bg-white text-green-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+                <ImageIcon size={16} />
+                <span className="hidden md:inline">ALBUM</span>
+            </button>
+            </nav>
+            
+            <button 
+                onClick={() => setSettingsModalOpen(true)}
+                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                title="設定"
+            >
+                <SettingsIcon size={20} />
+            </button>
+        </div>
       </header>
 
       {/* --- Legend Bar (Sheet View Only) --- */}
       {view === 'sheet' && (
         <div className="flex-none px-6 py-2 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-4 items-center overflow-x-auto z-10">
-          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mr-2">Legend:</span>
+          <span className="text-[10px] opacity-50 uppercase tracking-wider font-bold mr-2">Legend:</span>
           {CARE_TYPES.map(type => (
             <div key={type.id} className="flex items-center space-x-1.5 opacity-80 hover:opacity-100 transition-opacity cursor-default">
               <span className={`w-2.5 h-2.5 rounded-full ${type.bgColor}`}></span>
-              <span className="text-xs text-gray-600 font-medium">{type.label}</span>
+              <span className="text-xs opacity-70 font-medium">{type.label}</span>
             </div>
           ))}
         </div>
@@ -153,6 +257,13 @@ const App: React.FC = () => {
         existingEvents={getEventsForContext()}
         onAddEvent={handleAddEvent}
         onDeleteEvent={handleDeleteEvent}
+      />
+
+      <SettingsModal 
+        isOpen={isSettingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+        settings={settings}
+        onUpdateSettings={setSettings}
       />
     </div>
   );

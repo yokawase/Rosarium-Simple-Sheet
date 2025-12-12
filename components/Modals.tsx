@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Pencil, Trash2, Camera, Upload } from 'lucide-react';
-import { Rose, BrandData, CareType, CareEvent } from '../types';
+import { X, Pencil, Trash2, Camera, Upload, Settings, Save, Check } from 'lucide-react';
+import { Rose, BrandData, CareType, CareEvent, AppSettings, FontSize } from '../types';
 import { BRAND_MASTER, CARE_TYPES } from '../constants';
 
 // --- Reusable Modal Wrapper ---
@@ -15,11 +15,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up border border-white/50 max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up border border-white/50 max-h-[90vh] overflow-y-auto flex flex-col">
         {title && (
-          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-[#FDFBF7] sticky top-0 z-10">
+          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-[#FDFBF7] sticky top-0 z-10 shrink-0">
             <h3 className="text-xl font-serif italic text-green-900">{title}</h3>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100">
               <X size={20} />
@@ -31,11 +31,94 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }) => {
               <X size={20} />
             </button>
         )}
-        <div className="p-6 bg-white">
+        <div className="p-6 bg-white overflow-y-auto">
           {children}
         </div>
       </div>
     </div>
+  );
+};
+
+// --- Settings Modal ---
+interface SettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  settings: AppSettings;
+  onUpdateSettings: (newSettings: AppSettings) => void;
+}
+
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onUpdateSettings }) => {
+  
+  const handleFontSizeChange = (size: FontSize) => {
+    onUpdateSettings({ ...settings, fontSize: size });
+  };
+
+  const toggleContrast = () => {
+    onUpdateSettings({ ...settings, highContrast: !settings.highContrast });
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="表示設定">
+      <div className="space-y-8">
+        
+        {/* Font Size */}
+        <div>
+          <label className="block text-sm font-bold opacity-70 uppercase tracking-wider mb-3">文字サイズ</label>
+          <div className="grid grid-cols-3 gap-3">
+            <button 
+              onClick={() => handleFontSizeChange('normal')}
+              className={`p-3 rounded-lg border flex flex-col items-center justify-center transition-all ${settings.fontSize === 'normal' ? 'bg-green-50 border-green-500 text-green-800 ring-1 ring-green-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <span className="text-base font-serif">A</span>
+              <span className="text-[10px] mt-1">普通</span>
+            </button>
+            <button 
+              onClick={() => handleFontSizeChange('large')}
+              className={`p-3 rounded-lg border flex flex-col items-center justify-center transition-all ${settings.fontSize === 'large' ? 'bg-green-50 border-green-500 text-green-800 ring-1 ring-green-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <span className="text-xl font-serif">A</span>
+              <span className="text-[10px] mt-1">大</span>
+            </button>
+            <button 
+              onClick={() => handleFontSizeChange('xl')}
+              className={`p-3 rounded-lg border flex flex-col items-center justify-center transition-all ${settings.fontSize === 'xl' ? 'bg-green-50 border-green-500 text-green-800 ring-1 ring-green-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <span className="text-3xl font-serif">A</span>
+              <span className="text-[10px] mt-1">特大</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Color / Contrast */}
+        <div>
+           <label className="block text-sm font-bold opacity-70 uppercase tracking-wider mb-3">文字色モード</label>
+           <div 
+             onClick={toggleContrast}
+             className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${settings.highContrast ? 'bg-gray-50 border-gray-900' : 'border-gray-200 hover:bg-gray-50'}`}
+           >
+             <div>
+               <div className="font-bold">くっきりブラック</div>
+               <div className="text-xs opacity-70 mt-1">文字色を「黒」に統一し、視認性を高めます</div>
+             </div>
+             <div className={`w-12 h-6 rounded-full p-1 transition-colors ${settings.highContrast ? 'bg-black' : 'bg-gray-300'}`}>
+               <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${settings.highContrast ? 'translate-x-6' : ''}`} />
+             </div>
+           </div>
+        </div>
+
+        {/* Explicit Save Button */}
+        <div className="pt-6 border-t border-gray-100">
+           <button 
+             onClick={onClose}
+             className="w-full py-3 bg-green-700 text-white rounded-lg hover:bg-green-800 flex items-center justify-center space-x-2 transition-colors shadow-md"
+           >
+             <Save size={18} />
+             <span className="font-bold">設定を保存する</span>
+           </button>
+        </div>
+
+      </div>
+    </Modal>
   );
 };
 
@@ -85,9 +168,9 @@ export const RoseFormModal: React.FC<RoseFormModalProps> = ({ isOpen, onClose, o
     <Modal isOpen={isOpen} onClose={onClose} title={initialData ? "バラ情報の編集" : "新しいバラをお迎え"}>
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">ブランド / 作出者</label>
+          <label className="block text-xs font-bold opacity-70 uppercase tracking-wider mb-1">ブランド / 作出者</label>
           <select 
-            className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-sm bg-white"
+            className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-base bg-white text-gray-900"
             value={formData.brand || ''}
             onChange={e => {
                 setFormData({...formData, brand: e.target.value, name: ''}); // Clear name when brand changes
@@ -102,12 +185,12 @@ export const RoseFormModal: React.FC<RoseFormModalProps> = ({ isOpen, onClose, o
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">品種名</label>
+          <label className="block text-xs font-bold opacity-70 uppercase tracking-wider mb-1">品種名</label>
           <div className="relative">
             <input 
                 type="text" 
                 list="variety-suggestions"
-                className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-sm"
+                className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-base text-gray-900"
                 value={formData.name || ''}
                 onChange={e => setFormData({...formData, name: e.target.value})}
                 placeholder={selectedBrandData ? "リストから選択または入力" : "ブランドを先に選択してください"}
@@ -123,19 +206,19 @@ export const RoseFormModal: React.FC<RoseFormModalProps> = ({ isOpen, onClose, o
 
         <div className="grid grid-cols-2 gap-4">
            <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">お迎え日</label>
+            <label className="block text-xs font-bold opacity-70 uppercase tracking-wider mb-1">お迎え日</label>
             <input 
               type="date" 
-              className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 outline-none text-sm"
+              className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 outline-none text-base text-gray-900"
               value={formData.acquisitionDate || ''}
               onChange={e => setFormData({...formData, acquisitionDate: e.target.value})}
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">作出年 (Year)</label>
+            <label className="block text-xs font-bold opacity-70 uppercase tracking-wider mb-1">作出年 (Year)</label>
              <input 
               type="number" 
-              className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 outline-none text-sm"
+              className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 outline-none text-base text-gray-900"
               value={formData.year || ''}
               onChange={e => setFormData({...formData, year: parseInt(e.target.value)})}
               placeholder="1985"
@@ -144,9 +227,9 @@ export const RoseFormModal: React.FC<RoseFormModalProps> = ({ isOpen, onClose, o
         </div>
 
          <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">特徴・メモ</label>
+          <label className="block text-xs font-bold opacity-70 uppercase tracking-wider mb-1">特徴・メモ</label>
           <textarea 
-            className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 outline-none text-sm h-24 resize-none"
+            className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 outline-none text-base h-24 resize-none text-gray-900"
             value={formData.description || ''}
             onChange={e => setFormData({...formData, description: e.target.value})}
             placeholder="花の特徴、香り、耐病性など..."
@@ -166,7 +249,7 @@ export const RoseFormModal: React.FC<RoseFormModalProps> = ({ isOpen, onClose, o
             ) : <div />}
          
           <div className="flex space-x-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-md text-sm transition-colors">
+            <button type="button" onClick={onClose} className="px-4 py-2 opacity-70 hover:bg-gray-100 rounded-md text-sm transition-colors">
                 キャンセル
             </button>
             <button type="submit" className="px-6 py-2 bg-green-700 text-white rounded-md shadow-sm hover:bg-green-800 text-sm font-bold transition-colors">
@@ -257,24 +340,24 @@ export const CareModal: React.FC<CareModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="お世話の記録">
       <div className="text-center mb-6">
-        <h4 className="text-2xl font-serif text-gray-800 italic">{rose.name}</h4>
-        <p className="text-sm text-gray-500 tracking-widest uppercase mt-1">{year}年 {month}月</p>
+        <h4 className="text-2xl font-serif text-gray-900 italic">{rose.name}</h4>
+        <p className="text-sm opacity-60 tracking-widest uppercase mt-1">{year}年 {month}月</p>
       </div>
 
       {/* Add New Section */}
       <div className="bg-[#FDFBF7] p-4 rounded-lg border border-green-100/50 mb-6 shadow-sm">
-        <label className="block text-xs font-bold text-gray-400 uppercase mb-3 text-center">新規記録</label>
+        <label className="block text-xs font-bold opacity-50 uppercase mb-3 text-center">新規記録</label>
         
         <div className="flex items-center justify-center space-x-2 mb-4">
-            <span className="text-gray-500 text-sm font-serif">{month}月</span>
+            <span className="opacity-70 text-sm font-serif">{month}月</span>
             <input 
                 type="number" 
                 min="1" max="31"
                 value={day}
                 onChange={(e) => setDay(parseInt(e.target.value))}
-                className="w-16 p-2 text-center border border-gray-300 rounded focus:border-green-500 outline-none font-serif text-lg bg-white"
+                className="w-16 p-2 text-center border border-gray-300 rounded focus:border-green-500 outline-none font-serif text-lg bg-white text-gray-900"
             />
-            <span className="text-gray-500 text-sm">日</span>
+            <span className="opacity-70 text-sm">日</span>
         </div>
 
         <div className="flex flex-wrap justify-center gap-3 mb-4">
@@ -305,7 +388,7 @@ export const CareModal: React.FC<CareModalProps> = ({
             <div className="mb-4 grid grid-cols-2 gap-3 animate-fade-in">
                 {/* Before Photo */}
                 <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase text-center">Before</label>
+                    <label className="block text-[10px] font-bold opacity-50 uppercase text-center">Before</label>
                     <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden bg-white">
                         {beforeImage ? (
                             <img src={beforeImage} alt="Before" className="w-full h-full object-cover" />
@@ -320,7 +403,7 @@ export const CareModal: React.FC<CareModalProps> = ({
                 </div>
                 {/* After Photo */}
                 <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase text-center">After</label>
+                    <label className="block text-[10px] font-bold opacity-50 uppercase text-center">After</label>
                     <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden bg-white">
                         {afterImage ? (
                             <img src={afterImage} alt="After" className="w-full h-full object-cover" />
@@ -348,7 +431,7 @@ export const CareModal: React.FC<CareModalProps> = ({
       {/* Existing Records */}
       <div>
         <div className="flex justify-between items-end mb-2 border-b border-gray-100 pb-1">
-            <label className="block text-xs font-bold text-gray-400 uppercase">履歴</label>
+            <label className="block text-xs font-bold opacity-50 uppercase">履歴</label>
             <button 
                 onClick={() => setIsEditMode(!isEditMode)}
                 className={`p-1.5 rounded-full transition-colors ${isEditMode ? 'bg-green-100 text-green-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
@@ -368,10 +451,10 @@ export const CareModal: React.FC<CareModalProps> = ({
              return (
                <div key={ev.id} className="flex justify-between items-center p-2.5 bg-white border border-gray-100 rounded-md hover:border-green-200 transition-colors group shadow-sm">
                  <div className="flex items-center space-x-3">
-                   <span className="font-serif font-bold text-gray-500 w-6 text-right text-lg">{dayStr}</span>
+                   <span className="font-serif font-bold opacity-60 w-6 text-right text-lg">{dayStr}</span>
                    <div className={`w-2 h-2 rounded-full ${type?.bgColor}`}></div>
-                   <span className="text-sm text-gray-700 font-medium">{type?.label}</span>
-                   {hasPhotos && <Camera size={14} className="text-gray-400" />}
+                   <span className="text-sm font-medium">{type?.label}</span>
+                   {hasPhotos && <Camera size={14} className="opacity-40" />}
                  </div>
                  
                  {isEditMode && (

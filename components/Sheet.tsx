@@ -93,7 +93,7 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
             {/* Sticky Top-Left Corner */}
             <th className="sticky left-0 top-0 z-50 w-[260px] min-w-[260px] p-4 bg-[#FDFBF7] border-r border-b border-gray-200 shadow-[1px_1px_0_rgba(226,232,240,1)] text-left">
               <div className="flex justify-between items-center">
-                <span className="font-serif italic text-xl text-gray-800">Rose Variety</span>
+                <span className="font-serif italic text-xl font-bold opacity-80">Rose Variety</span>
                 <button 
                   onClick={() => onOpenRoseModal()}
                   className="w-8 h-8 rounded-full bg-green-50 text-green-700 hover:bg-green-100 flex items-center justify-center transition-colors shadow-sm"
@@ -113,16 +113,18 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
                   return (
                     <th 
                       key={`${year}-${month}`}
-                      className={`sticky top-0 z-40 h-16 min-w-[80px] w-[80px] bg-[#FDFBF7] border-b border-gray-200 text-xs font-normal text-gray-400 border-r border-gray-100 ${isYearStart ? 'border-l-2 border-l-gray-300' : ''}`}
+                      className={`sticky top-0 z-40 min-h-16 h-auto py-2 min-w-[80px] w-[80px] bg-[#FDFBF7] border-b border-gray-200 border-r border-gray-100 ${isYearStart ? 'border-l-2 border-l-gray-300' : ''}`}
                     >
                       {month === 1 ? (
                         <div className="flex flex-col items-center justify-center h-full">
                           {/* Increased font size for Year */}
-                          <span className="font-bold text-gray-700 text-3xl font-serif">{year}</span>
-                          <span className="text-[10px] uppercase tracking-wider">Jan</span>
+                          <span className="font-bold text-gray-800 text-3xl font-serif">{year}</span>
+                          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-1">Jan</span>
                         </div>
                       ) : (
-                        <span className="opacity-50">{month}</span>
+                        <div className="flex items-center justify-center h-full">
+                          <span className="text-2xl font-serif text-gray-400 font-medium">{month}</span>
+                        </div>
                       )}
                     </th>
                   );
@@ -145,13 +147,13 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
                   onClick={() => onOpenRoseModal(rose)}
                 >
                   <div className="flex flex-col">
-                    <span className="font-medium text-gray-800 truncate group-hover:text-green-800 transition-colors font-serif text-lg text-ellipsis overflow-hidden whitespace-nowrap">{rose.name}</span>
-                    <span className="text-[10px] text-gray-400 mt-1 truncate font-sans tracking-wide">
+                    <span className="font-medium opacity-90 truncate group-hover:text-green-800 transition-colors font-serif text-lg text-ellipsis overflow-hidden whitespace-nowrap">{rose.name}</span>
+                    <span className="text-[10px] opacity-50 mt-1 truncate font-sans tracking-wide">
                         {rose.year ? `${rose.year} | ` : ''}{displayBrand}
                     </span>
                   </div>
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <Icons.Edit2 size={14} className="text-gray-300 hover:text-green-600" />
+                     <Icons.Edit2 size={14} className="opacity-40 hover:text-green-600" />
                   </div>
                 </th>
 
@@ -166,7 +168,7 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
                       return (
                         <td 
                           key={`${year}-${month}`}
-                          className={`relative h-24 border-r border-gray-100 align-top p-1 hover:bg-green-50/50 cursor-pointer transition-colors ${isYearStart ? 'border-l-2 border-l-gray-300' : ''}`}
+                          className={`relative min-h-24 h-24 border-r border-gray-100 align-top p-1 hover:bg-green-50/50 cursor-pointer transition-colors ${isYearStart ? 'border-l-2 border-l-gray-300' : ''}`}
                           onClick={() => onOpenCareModal(year, month, rose)}
                         >
                           <div className="flex flex-wrap content-start gap-1 w-full h-full overflow-hidden">
@@ -179,7 +181,7 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
                                   <div className={`w-5 h-5 rounded-full flex items-center justify-center ${type.bgColor} text-white shadow-sm transform transition-transform group-hover/chip:scale-110`}>
                                      <IconComponent name={type.iconName} className="w-3 h-3" />
                                   </div>
-                                  <span className="text-[9px] text-gray-400 ml-0.5 font-mono">{day}</span>
+                                  <span className="text-[9px] opacity-50 ml-0.5 font-mono">{day}</span>
                                 </div>
                               );
                             })}
