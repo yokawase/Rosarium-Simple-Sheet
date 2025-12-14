@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Rose, CareEvent } from '../types';
-import { CARE_TYPES, BRAND_MASTER } from '../constants';
+import { CARE_TYPES, BRAND_MASTER, PRODUCT_LIBRARY } from '../constants';
 import * as Icons from 'lucide-react';
 import { Plus } from 'lucide-react';
 
@@ -11,9 +11,9 @@ interface SheetProps {
   onOpenCareModal: (year: number, month: number, rose: Rose) => void;
 }
 
-const IconComponent = React.memo(({ name, className }: { name: string, className?: string }) => {
+const IconComponent = React.memo(({ name, className, color }: { name: string, className?: string, color?: string }) => {
   const Icon = (Icons as any)[name] || Icons.HelpCircle;
-  return <Icon className={className} />;
+  return <Icon className={className} stroke={color} />;
 });
 
 export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, onOpenCareModal }) => {
@@ -78,6 +78,17 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
   const getEventsForCell = (roseId: string, year: number, month: number) => {
     const prefix = `${year}-${month.toString().padStart(2, '0')}`;
     return events.filter(e => e.roseId === roseId && e.date.startsWith(prefix));
+  };
+
+  // Group events by Type for vertical stacking
+  const groupEventsByType = (cellEvents: CareEvent[]) => {
+      const groups: Record<string, CareEvent[]> = {};
+      CARE_TYPES.forEach(t => groups[t.id] = []);
+      
+      cellEvents.forEach(ev => {
+          if (groups[ev.typeId]) groups[ev.typeId].push(ev);
+      });
+      return groups;
   };
 
   return (
@@ -164,27 +175,40 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
                       const month = i + 1;
                       const cellEvents = getEventsForCell(rose.id, year, month);
                       const isYearStart = month === 1;
+                      const groupedEvents = groupEventsByType(cellEvents);
 
                       return (
                         <td 
                           key={`${year}-${month}`}
-                          className={`relative min-h-24 h-24 border-r border-gray-100 align-top p-1 hover:bg-green-50/50 cursor-pointer transition-colors ${isYearStart ? 'border-l-2 border-l-gray-300' : ''}`}
+                          className={`relative min-h-24 h-24 border-r border-gray-100 align-top hover:bg-green-50/50 cursor-pointer transition-colors ${isYearStart ? 'border-l-2 border-l-gray-300' : ''}`}
                           onClick={() => onOpenCareModal(year, month, rose)}
                         >
-                          <div className="flex flex-wrap content-start gap-1 w-full h-full overflow-hidden">
-                            {cellEvents.map(ev => {
-                              const type = CARE_TYPES.find(t => t.id === ev.typeId);
-                              if(!type) return null;
-                              const day = ev.date.split('-')[2];
-                              return (
-                                <div key={ev.id} className="flex items-center group/chip" title={`${day}日: ${type.label}`}>
-                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center ${type.bgColor} text-white shadow-sm transform transition-transform group-hover/chip:scale-110`}>
-                                     <IconComponent name={type.iconName} className="w-3 h-3" />
-                                  </div>
-                                  <span className="text-[9px] opacity-50 ml-0.5 font-mono">{day}</span>
-                                </div>
-                              );
-                            })}
+                          {/* Vertical Column Layout for different types */}
+                          <div className="flex h-full w-full p-1 gap-1 overflow-hidden">
+                              {CARE_TYPES.map(type => {
+                                  const eventsOfType = groupedEvents[type.id];
+                                  if (!eventsOfType || eventsOfType.length === 0) return null;
+                                  
+                                  // For vertical stacking of specific products
+                                  return (
+                                      <div key={type.id} className="flex flex-col gap-1 items-center min-w-[12px]">
+                                          {eventsOfType.map(ev => {
+                                              const prod = ev.productId ? PRODUCT_LIBRARY[ev.productId] : null;
+                                              const color = prod ? prod.color : type.color;
+                                              const day = ev.date.split('-')[2];
+
+                                              return (
+                                                  <div 
+                                                    key={ev.id} 
+                                                    className="w-3 h-3 rounded-full flex-shrink-0"
+                                                    style={{ backgroundColor: color }}
+                                                    title={`${day}日: ${prod ? prod.name : type.label}`}
+                                                  />
+                                              );
+                                          })}
+                                      </div>
+                                  );
+                              })}
                           </div>
                         </td>
                       );

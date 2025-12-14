@@ -1,5 +1,5 @@
 
-export type CareTypeId = 'pruning' | 'repot' | 'liquid' | 'solid' | 'vital' | 'pest' | 'blooming';
+export type CareTypeId = 'pruning' | 'repot' | 'soil' | 'liquid' | 'solid' | 'vital' | 'pest' | 'blooming';
 
 export interface CareType {
   id: CareTypeId;
@@ -23,11 +23,36 @@ export interface Rose {
   description?: string;
 }
 
+// --- New Structures for Soil & Pot ---
+
+export interface SoilDefinition {
+  id: string;
+  name: string;
+  category: 'base' | 'organic' | 'adjust'; // Base soil, Organic matter, Adjustment
+}
+
+export interface SoilMixComponent {
+  soilId: string;
+  value: number; // Part or Liter
+}
+
+export interface PotChangeDetail {
+  mode: 'up' | 'down' | 'same'; // 鉢増し, 鉢下げ, 維持
+  fromSize: number; // 号数
+  toSize: number;   // 号数
+}
+
 export interface CareEvent {
   id: string;
   roseId: string;
   date: string; // ISO Date YYYY-MM-DD
   typeId: CareTypeId;
+  productId?: string; // ID of the specific product used
+  
+  // New Fields
+  soilMix?: SoilMixComponent[]; 
+  potChange?: PotChangeDetail;
+
   note?: string;
   images?: {
     before?: string; // Base64 data string
@@ -49,4 +74,23 @@ export type FontSize = 'normal' | 'large' | 'xl';
 export interface AppSettings {
   fontSize: FontSize;
   highContrast: boolean; // True = Black text, False = Default design
+}
+
+// --- Database Types ---
+
+export interface RoseDefinition {
+  name: string;
+  brand: string;
+  year: number;
+  description: string;
+  kana: string; // For sorting
+}
+
+export interface ProductDefinition {
+  id: string;
+  name: string;
+  maker: string;
+  description: string;
+  color: string; // Specific hex color for the icon
+  typeId: CareTypeId;
 }

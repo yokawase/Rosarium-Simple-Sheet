@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Pencil, Trash2, Camera, Upload, Settings, Save, Check } from 'lucide-react';
-import { Rose, BrandData, CareType, CareEvent, AppSettings, FontSize } from '../types';
-import { BRAND_MASTER, CARE_TYPES } from '../constants';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { X, Pencil, Trash2, Camera, Upload, Settings, Save, Check, Search, ChevronDown, ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Rose, BrandData, CareType, CareEvent, AppSettings, FontSize, RoseDefinition, ProductDefinition, SoilMixComponent, PotChangeDetail } from '../types';
+import { BRAND_MASTER, CARE_TYPES, ROSE_LIBRARY, PRODUCT_LIBRARY, SOIL_LIBRARY } from '../constants';
 
 // --- Reusable Modal Wrapper ---
 interface ModalProps {
@@ -133,10 +133,20 @@ interface RoseFormModalProps {
 
 export const RoseFormModal: React.FC<RoseFormModalProps> = ({ isOpen, onClose, onSubmit, onDelete, initialData }) => {
   const [formData, setFormData] = useState<Partial<Rose>>({});
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+
+  // Sort Library by Kana
+  const sortedLibrary = useMemo(() => {
+    return [...ROSE_LIBRARY].sort((a, b) => a.kana.localeCompare(b.kana, 'ja'));
+  }, []);
+
+  const [filteredRoses, setFilteredRoses] = useState<RoseDefinition[]>([]);
 
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
+      setNameInput(initialData.name || '');
     } else {
       setFormData({
         brand: '',
@@ -144,16 +154,46 @@ export const RoseFormModal: React.FC<RoseFormModalProps> = ({ isOpen, onClose, o
         acquisitionDate: new Date().toISOString().split('T')[0],
         description: ''
       });
+      setNameInput('');
     }
-  }, [initialData, isOpen]);
+    setFilteredRoses(sortedLibrary);
+  }, [initialData, isOpen, sortedLibrary]);
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNameInput(val);
+    setFormData(prev => ({ ...prev, name: val }));
+    setShowSuggestions(true);
+
+    if (val.trim() === '') {
+      setFilteredRoses(sortedLibrary);
+    } else {
+      const lower = val.toLowerCase();
+      setFilteredRoses(sortedLibrary.filter(r => 
+        r.name.toLowerCase().includes(lower) || r.kana.includes(lower)
+      ));
+    }
+  };
+
+  const selectRoseFromLibrary = (def: RoseDefinition) => {
+    setFormData(prev => ({
+      ...prev,
+      name: def.name,
+      brand: def.brand,
+      year: def.year,
+      description: def.description
+    }));
+    setNameInput(def.name);
+    setShowSuggestions(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name && formData.brand) {
+    if (formData.name) {
       onSubmit({
         id: initialData?.id || Math.random().toString(36).substr(2, 9),
         name: formData.name,
-        brand: formData.brand,
+        brand: formData.brand || 'Unknown',
         year: formData.year,
         acquisitionDate: formData.acquisitionDate,
         description: formData.description
@@ -162,46 +202,68 @@ export const RoseFormModal: React.FC<RoseFormModalProps> = ({ isOpen, onClose, o
     }
   };
 
-  const selectedBrandData = formData.brand ? BRAND_MASTER[formData.brand] : null;
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={initialData ? "バラ情報の編集" : "新しいバラをお迎え"}>
       <form onSubmit={handleSubmit} className="space-y-5">
+        
+        {/* Name Input with Autocomplete */}
+        <div className="relative">
+            <label className="block text-xs font-bold opacity-70 uppercase tracking-wider mb-1">品種名</label>
+            <div className="relative">
+                <input 
+                    type="text" 
+                    className="w-full p-3 border border-gray-300 rounded-md focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-lg font-serif text-gray-900"
+                    value={nameInput}
+                    onChange={handleNameChange}
+                    onFocus={() => setShowSuggestions(true)}
+                    // Delay blur to allow click on suggestion
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    placeholder="品種名を入力 (例: ぴえーる...)"
+                    required
+                    autoComplete="off"
+                />
+                <div className="absolute right-3 top-3.5 text-gray-400">
+                    <Search size={18} />
+                </div>
+            </div>
+
+            {/* Suggestions Dropdown */}
+            {showSuggestions && (
+                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                    {filteredRoses.length === 0 ? (
+                         <div className="p-3 text-sm text-gray-400 text-center">見つかりません（手動で入力可能）</div>
+                    ) : (
+                        filteredRoses.map((rose, idx) => (
+                            <div 
+                                key={idx}
+                                className="p-3 hover:bg-green-50 cursor-pointer border-b border-gray-50 last:border-0"
+                                onClick={() => selectRoseFromLibrary(rose)}
+                            >
+                                <div className="font-medium text-gray-800">{rose.name}</div>
+                                <div className="text-xs text-gray-500 flex justify-between mt-0.5">
+                                    <span>{rose.brand}</span>
+                                    <span>{rose.year}年</span>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+        </div>
+
         <div>
           <label className="block text-xs font-bold opacity-70 uppercase tracking-wider mb-1">ブランド / 作出者</label>
           <select 
             className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-base bg-white text-gray-900"
             value={formData.brand || ''}
-            onChange={e => {
-                setFormData({...formData, brand: e.target.value, name: ''}); // Clear name when brand changes
-            }}
+            onChange={e => setFormData({...formData, brand: e.target.value})}
             required
           >
-            <option value="">-- 選択してください --</option>
+            <option value="">-- 選択してください (自動入力可) --</option>
             {Object.entries(BRAND_MASTER).map(([key, data]) => (
               <option key={key} value={key}>{data.label}</option>
             ))}
           </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold opacity-70 uppercase tracking-wider mb-1">品種名</label>
-          <div className="relative">
-            <input 
-                type="text" 
-                list="variety-suggestions"
-                className="w-full p-2.5 border border-gray-300 rounded-md focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-base text-gray-900"
-                value={formData.name || ''}
-                onChange={e => setFormData({...formData, name: e.target.value})}
-                placeholder={selectedBrandData ? "リストから選択または入力" : "ブランドを先に選択してください"}
-                required
-            />
-             <datalist id="variety-suggestions">
-                {selectedBrandData?.varieties.map(v => (
-                <option key={v} value={v} />
-                ))}
-            </datalist>
-          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -272,28 +334,54 @@ interface CareModalProps {
   rose: Rose | null;
   existingEvents: CareEvent[];
   onAddEvent: (event: CareEvent) => void;
+  onUpdateEvent: (event: CareEvent) => void;
   onDeleteEvent: (eventId: string) => void;
 }
 
 export const CareModal: React.FC<CareModalProps> = ({ 
-  isOpen, onClose, year, month, rose, existingEvents, onAddEvent, onDeleteEvent 
+  isOpen, onClose, year, month, rose, existingEvents, onAddEvent, onUpdateEvent, onDeleteEvent 
 }) => {
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  
   const [day, setDay] = useState<number>(new Date().getDate());
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   
   // Photo States
   const [beforeImage, setBeforeImage] = useState<string | null>(null);
   const [afterImage, setAfterImage] = useState<string | null>(null);
 
-  // Reset when modal opens/closes or type changes
+  // New States for Soil and Pot
+  const [soilMix, setSoilMix] = useState<SoilMixComponent[]>([]);
+  const [potChange, setPotChange] = useState<PotChangeDetail>({ mode: 'same', fromSize: 8, toSize: 8 });
+
+  const inputRef = useRef<HTMLDivElement>(null);
+
+  // Reset when modal opens/closes
   useEffect(() => {
     if(isOpen) {
-        setIsEditMode(false);
-        setBeforeImage(null);
-        setAfterImage(null);
+        resetForm();
     }
   }, [isOpen]);
+
+  const resetForm = () => {
+    setEditingId(null);
+    setBeforeImage(null);
+    setAfterImage(null);
+    setSelectedProductId("");
+    setSelectedType(null);
+    setSoilMix([]);
+    setPotChange({ mode: 'same', fromSize: 8, toSize: 8 });
+    setDay(new Date().getDate());
+  };
+
+  // Reset details when type changes (unless editing)
+  useEffect(() => {
+      if (!editingId && selectedType) {
+        setSelectedProductId("");
+        setSoilMix([]);
+      }
+  }, [selectedType]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isBefore: boolean) => {
     const file = e.target.files?.[0];
@@ -307,15 +395,58 @@ export const CareModal: React.FC<CareModalProps> = ({
     }
   };
 
-  const handleAdd = () => {
+  // Soil Logic
+  const handleAddSoil = (soilId: string) => {
+      setSoilMix(prev => {
+          if (prev.find(s => s.soilId === soilId)) return prev;
+          return [...prev, { soilId, value: 1 }];
+      });
+  };
+
+  const handleSoilValueChange = (soilId: string, newVal: number) => {
+      setSoilMix(prev => prev.map(s => s.soilId === soilId ? { ...s, value: Math.max(0, newVal) } : s));
+  };
+
+  const removeSoil = (soilId: string) => {
+      setSoilMix(prev => prev.filter(s => s.soilId !== soilId));
+  };
+
+  const soilTotal = useMemo(() => soilMix.reduce((sum, s) => sum + s.value, 0), [soilMix]);
+
+  // Handle Edit Click
+  const handleEditClick = (ev: CareEvent) => {
+      setEditingId(ev.id);
+      setSelectedType(ev.typeId);
+      setDay(parseInt(ev.date.split('-')[2]));
+      setSelectedProductId(ev.productId || "");
+      setSoilMix(ev.soilMix || []);
+      setPotChange(ev.potChange || { mode: 'same', fromSize: 8, toSize: 8 });
+      setBeforeImage(ev.images?.before || null);
+      setAfterImage(ev.images?.after || null);
+      
+      // Scroll to top
+      if (inputRef.current) {
+          inputRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+  };
+
+  const handleCancelEdit = () => {
+      resetForm();
+  };
+
+  // Handle Save (Add or Update)
+  const handleSave = () => {
     if (selectedType && rose) {
       const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
       
       const eventPayload: CareEvent = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: editingId || Math.random().toString(36).substr(2, 9),
         roseId: rose.id,
         date: dateStr,
-        typeId: selectedType as any
+        typeId: selectedType as any,
+        productId: selectedProductId || undefined,
+        soilMix: (selectedType === 'soil' && soilMix.length > 0) ? soilMix : undefined,
+        potChange: selectedType === 'repot' ? potChange : undefined,
       };
 
       // Add images if pruning
@@ -326,14 +457,21 @@ export const CareModal: React.FC<CareModalProps> = ({
           };
       }
 
-      onAddEvent(eventPayload);
+      if (editingId) {
+          onUpdateEvent(eventPayload);
+      } else {
+          onAddEvent(eventPayload);
+      }
       
-      // Reset
-      setSelectedType(null);
-      setBeforeImage(null);
-      setAfterImage(null);
+      resetForm();
     }
   };
+
+  // Filter products for the selected category
+  const availableProducts = useMemo(() => {
+      if (!selectedType) return [];
+      return Object.values(PRODUCT_LIBRARY).filter(p => p.typeId === selectedType);
+  }, [selectedType]);
 
   if (!rose) return null;
 
@@ -344,9 +482,18 @@ export const CareModal: React.FC<CareModalProps> = ({
         <p className="text-sm opacity-60 tracking-widest uppercase mt-1">{year}年 {month}月</p>
       </div>
 
-      {/* Add New Section */}
-      <div className="bg-[#FDFBF7] p-4 rounded-lg border border-green-100/50 mb-6 shadow-sm">
-        <label className="block text-xs font-bold opacity-50 uppercase mb-3 text-center">新規記録</label>
+      {/* Input Section */}
+      <div ref={inputRef} className={`p-4 rounded-lg border mb-6 shadow-sm transition-colors ${editingId ? 'bg-orange-50 border-orange-200' : 'bg-[#FDFBF7] border-green-100/50'}`}>
+        <div className="flex justify-between items-center mb-3">
+             <label className={`block text-xs font-bold uppercase ${editingId ? 'text-orange-600' : 'opacity-50'}`}>
+                {editingId ? '記録を編集' : '新規記録'}
+             </label>
+             {editingId && (
+                 <button onClick={handleCancelEdit} className="text-xs text-gray-400 hover:text-gray-600 underline">
+                     キャンセル
+                 </button>
+             )}
+        </div>
         
         <div className="flex items-center justify-center space-x-2 mb-4">
             <span className="opacity-70 text-sm font-serif">{month}月</span>
@@ -360,6 +507,7 @@ export const CareModal: React.FC<CareModalProps> = ({
             <span className="opacity-70 text-sm">日</span>
         </div>
 
+        {/* 1. Select Care Type */}
         <div className="flex flex-wrap justify-center gap-3 mb-4">
           {CARE_TYPES.map(type => (
             <button
@@ -373,15 +521,152 @@ export const CareModal: React.FC<CareModalProps> = ({
               }`}
               title={type.label}
             >
-             {/* Use first char for simplicity in buttons */}
-             <span className="text-[10px] font-bold">{type.label[0]}</span>
+             {type.iconName === 'Layers' ? <Settings size={14} /> : 
+              type.iconName === 'Move' ? <ArrowRight size={14} className="rotate-45" /> :
+              <span className="text-[10px] font-bold">{type.label[0]}</span>
+             }
             </button>
           ))}
         </div>
         
-        <div className="text-center text-xs h-4 mb-3 text-green-700 font-bold">
+        <div className="text-center text-xs h-4 mb-4 text-green-700 font-bold">
             {selectedType ? CARE_TYPES.find(t => t.id === selectedType)?.label : '作業を選択してください'}
         </div>
+
+        {/* --- Pot Change UI (When 'repot' is selected) --- */}
+        {selectedType === 'repot' && (
+            <div className="mb-4 animate-fade-in space-y-4">
+                <div className="flex justify-center gap-2">
+                    <button 
+                        onClick={() => setPotChange({ ...potChange, mode: 'up' })}
+                        className={`px-3 py-2 rounded-md text-xs font-bold flex items-center gap-1 transition-colors ${potChange.mode === 'up' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-white border border-gray-200 text-gray-500'}`}
+                    >
+                        <TrendingUp size={14} /> 鉢増し
+                    </button>
+                    <button 
+                         onClick={() => setPotChange({ ...potChange, mode: 'same' })}
+                         className={`px-3 py-2 rounded-md text-xs font-bold flex items-center gap-1 transition-colors ${potChange.mode === 'same' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-white border border-gray-200 text-gray-500'}`}
+                    >
+                        <Minus size={14} /> 維持
+                    </button>
+                    <button 
+                         onClick={() => setPotChange({ ...potChange, mode: 'down' })}
+                         className={`px-3 py-2 rounded-md text-xs font-bold flex items-center gap-1 transition-colors ${potChange.mode === 'down' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-white border border-gray-200 text-gray-500'}`}
+                    >
+                        <TrendingDown size={14} /> 鉢下げ
+                    </button>
+                </div>
+                
+                <div className="flex items-center justify-center gap-3">
+                    <div className="flex flex-col items-center">
+                        <label className="text-[10px] text-gray-400 mb-1">From</label>
+                        <div className="flex items-center">
+                            <input 
+                                type="number" 
+                                className="w-12 p-1 text-center border border-gray-300 rounded text-sm"
+                                value={potChange.fromSize}
+                                onChange={(e) => setPotChange({...potChange, fromSize: parseInt(e.target.value)})}
+                            />
+                            <span className="text-xs ml-1">号</span>
+                        </div>
+                    </div>
+                    <ArrowRight size={16} className="text-gray-300 mt-4" />
+                    <div className="flex flex-col items-center">
+                        <label className="text-[10px] text-gray-400 mb-1">To</label>
+                        <div className="flex items-center">
+                            <input 
+                                type="number" 
+                                className="w-12 p-1 text-center border border-gray-300 rounded text-sm"
+                                value={potChange.toSize}
+                                onChange={(e) => setPotChange({...potChange, toSize: parseInt(e.target.value)})}
+                            />
+                             <span className="text-xs ml-1">号</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* --- Soil Mix UI (When 'soil' is selected) --- */}
+        {selectedType === 'soil' && (
+            <div className="mb-4 animate-fade-in">
+                 <label className="block text-[10px] font-bold opacity-50 uppercase text-center mb-2">使用した用土（複数選択可）</label>
+                 
+                 {/* Soil Selector */}
+                 <div className="flex flex-wrap gap-2 justify-center mb-4">
+                     {SOIL_LIBRARY.map(soil => (
+                         <button
+                            key={soil.id}
+                            onClick={() => handleAddSoil(soil.id)}
+                            className="text-xs px-2 py-1 bg-white border border-gray-200 rounded hover:bg-amber-50 hover:text-amber-800 hover:border-amber-200 transition-colors"
+                         >
+                             {soil.name}
+                         </button>
+                     ))}
+                 </div>
+
+                 {/* Mixed List */}
+                 {soilMix.length > 0 && (
+                     <div className="bg-white rounded-md border border-gray-200 p-3 space-y-2">
+                         {soilMix.map((comp) => {
+                             const def = SOIL_LIBRARY.find(s => s.id === comp.soilId);
+                             const percent = soilTotal > 0 ? Math.round((comp.value / soilTotal) * 100) : 0;
+                             
+                             return (
+                                 <div key={comp.soilId} className="flex items-center gap-2">
+                                     <span className="flex-1 text-sm font-medium text-gray-700">{def?.name}</span>
+                                     <div className="flex items-center gap-1">
+                                         <input 
+                                            type="number"
+                                            min="0"
+                                            value={comp.value}
+                                            onChange={(e) => handleSoilValueChange(comp.soilId, parseFloat(e.target.value))}
+                                            className="w-12 p-1 text-right border border-gray-300 rounded text-sm"
+                                         />
+                                         <span className="text-xs text-gray-400 w-8">part</span>
+                                     </div>
+                                     <div className="w-10 text-right text-xs font-bold text-amber-600">{percent}%</div>
+                                     <button onClick={() => removeSoil(comp.soilId)} className="text-gray-300 hover:text-red-400">
+                                         <X size={14} />
+                                     </button>
+                                 </div>
+                             )
+                         })}
+                         <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
+                             <span className="text-xs text-gray-400">Total: {soilTotal} parts</span>
+                         </div>
+                     </div>
+                 )}
+            </div>
+        )}
+
+        {/* 2. Select Product (If available for type) */}
+        {availableProducts.length > 0 && (
+            <div className="mb-4 animate-fade-in">
+                <label className="block text-[10px] font-bold opacity-50 uppercase text-center mb-2">使用した薬剤・肥料</label>
+                <div className="grid grid-cols-1 gap-2">
+                    {availableProducts.map(prod => (
+                        <button
+                            key={prod.id}
+                            type="button"
+                            onClick={() => setSelectedProductId(prod.id === selectedProductId ? "" : prod.id)}
+                            className={`p-2 rounded-md border text-left text-sm flex items-center transition-all ${
+                                selectedProductId === prod.id
+                                    ? 'bg-white border-green-500 ring-1 ring-green-500 text-green-800 shadow-sm'
+                                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-400'
+                            }`}
+                        >
+                            <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: prod.color }}></div>
+                            <div className="flex-1">
+                                <div className="font-bold">{prod.name}</div>
+                                <div className="text-[10px] opacity-60 truncate">{prod.maker}</div>
+                            </div>
+                            {selectedProductId === prod.id && <Check size={14} className="text-green-600" />}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        )}
 
         {/* --- Pruning Photo Upload UI --- */}
         {selectedType === 'pruning' && (
@@ -419,53 +704,85 @@ export const CareModal: React.FC<CareModalProps> = ({
             </div>
         )}
 
-        <button 
-          onClick={handleAdd}
-          disabled={!selectedType}
-          className="w-full py-2.5 bg-green-700 text-white rounded-md hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm transition-all shadow-sm active:scale-95"
-        >
-          記録する
-        </button>
+        <div className="flex gap-2">
+            <button 
+                onClick={handleSave}
+                disabled={!selectedType}
+                className={`flex-1 py-2.5 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm transition-all shadow-sm active:scale-95 ${editingId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-700 hover:bg-green-800'}`}
+            >
+                {editingId ? '更新する' : '記録する'}
+            </button>
+            {editingId && (
+                <button 
+                    onClick={() => {
+                        if(editingId && window.confirm("この記録を削除しますか？")) {
+                            onDeleteEvent(editingId);
+                            resetForm();
+                        }
+                    }}
+                    className="px-4 py-2.5 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors"
+                >
+                    <Trash2 size={18} />
+                </button>
+            )}
+        </div>
       </div>
 
       {/* Existing Records */}
       <div>
         <div className="flex justify-between items-end mb-2 border-b border-gray-100 pb-1">
-            <label className="block text-xs font-bold opacity-50 uppercase">履歴</label>
-            <button 
-                onClick={() => setIsEditMode(!isEditMode)}
-                className={`p-1.5 rounded-full transition-colors ${isEditMode ? 'bg-green-100 text-green-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
-                title="編集・削除"
-            >
-                <Pencil size={14} />
-            </button>
+            <label className="block text-xs font-bold opacity-50 uppercase">履歴 (タップして編集)</label>
         </div>
         
         <div className="max-h-40 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
           {existingEvents.length === 0 && <p className="text-center text-gray-300 text-sm italic py-4">まだ記録はありません</p>}
           {existingEvents.sort((a,b) => parseInt(b.date.split('-')[2]) - parseInt(a.date.split('-')[2])).map(ev => {
              const type = CARE_TYPES.find(t => t.id === ev.typeId);
+             const prod = ev.productId ? PRODUCT_LIBRARY[ev.productId] : null;
              const dayStr = ev.date.split('-')[2];
              const hasPhotos = ev.images && (ev.images.before || ev.images.after);
+             const isBeingEdited = ev.id === editingId;
+
+             // Dynamic color based on product or default type color
+             const indicatorColor = prod ? prod.color : (type?.color || '#ccc');
 
              return (
-               <div key={ev.id} className="flex justify-between items-center p-2.5 bg-white border border-gray-100 rounded-md hover:border-green-200 transition-colors group shadow-sm">
-                 <div className="flex items-center space-x-3">
+               <div 
+                    key={ev.id} 
+                    onClick={() => handleEditClick(ev)}
+                    className={`flex justify-between items-center p-2.5 bg-white border rounded-md transition-all group shadow-sm cursor-pointer ${isBeingEdited ? 'border-orange-400 ring-1 ring-orange-400 bg-orange-50' : 'border-gray-100 hover:border-green-300 hover:shadow-md'}`}
+               >
+                 <div className="flex items-center space-x-3 flex-1">
                    <span className="font-serif font-bold opacity-60 w-6 text-right text-lg">{dayStr}</span>
-                   <div className={`w-2 h-2 rounded-full ${type?.bgColor}`}></div>
-                   <span className="text-sm font-medium">{type?.label}</span>
+                   <div 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: indicatorColor }}
+                   ></div>
+                   <div className="flex flex-col flex-1">
+                        <span className="text-sm font-medium">{type?.label}</span>
+                        {prod && <span className="text-[10px] text-gray-500">{prod.name}</span>}
+                        {/* Detail View for Pot Change */}
+                        {ev.potChange && (
+                            <span className="text-[10px] text-orange-600 flex items-center gap-1">
+                                {ev.potChange.mode === 'up' && <TrendingUp size={10} />}
+                                {ev.potChange.mode === 'down' && <TrendingDown size={10} />}
+                                {ev.potChange.fromSize}号 → {ev.potChange.toSize}号
+                            </span>
+                        )}
+                        {/* Detail View for Soil Mix */}
+                        {ev.soilMix && (
+                            <span className="text-[10px] text-amber-700 truncate max-w-[120px]">
+                                {ev.soilMix.length}種のブレンド
+                            </span>
+                        )}
+                   </div>
                    {hasPhotos && <Camera size={14} className="opacity-40" />}
                  </div>
                  
-                 {isEditMode && (
-                     <button 
-                      onClick={() => onDeleteEvent(ev.id)}
-                      className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors"
-                      title="削除"
-                     >
-                       <Trash2 size={16} />
-                     </button>
-                 )}
+                 {/* Pencil Icon Indicator */}
+                 <div className={`text-gray-400 px-2 ${isBeingEdited ? 'opacity-100 text-orange-500' : 'opacity-0 group-hover:opacity-100'}`}>
+                    <Pencil size={14} />
+                 </div>
                </div>
              )
           })}

@@ -100,6 +100,10 @@ const App: React.FC = () => {
     setEvents(prev => [...prev, event]);
   };
 
+  const handleUpdateEvent = (updatedEvent: CareEvent) => {
+    setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+  };
+
   const handleDeleteEvent = (eventId: string) => {
     setEvents(prev => prev.filter(e => e.id !== eventId));
   };
@@ -256,6 +260,7 @@ const App: React.FC = () => {
         rose={careContext.rose}
         existingEvents={getEventsForContext()}
         onAddEvent={handleAddEvent}
+        onUpdateEvent={handleUpdateEvent}
         onDeleteEvent={handleDeleteEvent}
       />
 
