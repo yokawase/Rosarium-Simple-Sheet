@@ -101,27 +101,25 @@ export const PRODUCT_LIBRARY: Record<string, ProductDefinition> = {
   'attack_one': { id: 'attack_one', typeId: 'pest', name: 'カダン アタックワンAL', maker: 'フマキラー', description: '速効性・密着。オールインワン。', color: '#f59e0b' }, // Amber
 };
 
-// --- Soil Library ---
+// --- Soil Library (Representative Products) ---
 export const SOIL_LIBRARY: SoilDefinition[] = [
-  // Base Soils
-  { id: 'akadama_hard', name: '硬質赤玉土', category: 'base' },
-  { id: 'akadama_soft', name: '赤玉土(一般)', category: 'base' },
-  { id: 'kanuma', name: '鹿沼土', category: 'base' },
-  
-  // Organic Matter
-  { id: 'peatmoss', name: 'ピートモス', category: 'organic' },
-  { id: 'coco_peat', name: 'ココピート', category: 'organic' },
-  { id: 'compost_horse', name: '馬糞堆肥', category: 'organic' },
-  { id: 'compost_cow', name: '牛糞堆肥', category: 'organic' },
-  { id: 'compost_bark', name: 'バーク堆肥', category: 'organic' },
-  { id: 'fuyoudo', name: '腐葉土', category: 'organic' },
+  // --- Cultivation Soil Mixes (培養土) ---
+  { id: 'baranoie_premiere', name: 'プレミアム培養土', maker: 'バラの家', category: 'mix', description: 'プロが使う最高品質。水はけ・水持ちのバランスが絶妙。' },
+  { id: 'keisei_soil', name: '京成バラ園の土', maker: '京成バラ園', category: 'mix', description: '多くのロザリアンに愛用されるロングセラー。' },
+  { id: 'hanagokoro_tokusen', name: '特選有機バラの土', maker: '花ごころ', category: 'mix', description: '海藻成分配合で根張りを強化。ふかふかの土。' },
+  { id: 'biogold_soil', name: 'バイオゴールドの土', maker: 'タクト', category: 'mix', description: '天然材料100%。連作障害が出にくい。' },
+  { id: 'myrose_soil', name: 'マイローズ ばらの土', maker: '住友化学園芸', category: 'mix', description: '軽くて扱いやすい。菌根菌配合で丈夫に育つ。' },
+  { id: 'da_rose_soil', name: 'ローズソイル', maker: 'デビッド・オースチン', category: 'mix', description: 'イングリッシュローズのために調整された専用土。' },
+  { id: 'protoleaf_rose', name: 'バラの土', maker: 'プロトリーフ', category: 'mix', description: '初期肥料入りでそのまま使える。' },
+  { id: 'wabara_soil', name: '和ばらの土', maker: 'Rose Farm Keiji', category: 'mix', description: '和ばらの繊細な根に合わせてブレンドされた土。' },
 
-  // Adjustment / Drainage
-  { id: 'perlite', name: 'パーライト', category: 'adjust' },
-  { id: 'vermiculite', name: 'バーミキュライト', category: 'adjust' },
-  { id: 'zeolite', name: 'ゼオライト', category: 'adjust' },
-  { id: 'kuntan', name: 'もみ殻くん炭', category: 'adjust' },
-  { id: 'kanitstuchi', name: 'カニ殻', category: 'adjust' },
+  // --- Base Ingredients / Single Products (単用土・改良材) ---
+  { id: 'nihonsen_akadama', name: '二本線 硬質赤玉土', maker: '刀川平和農園', category: 'base', description: '崩れにくい最高級の硬質赤玉。' },
+  { id: 'kanuma_generic', name: '硬質鹿沼土', maker: '一般', category: 'base', description: '酸性土壌を好む場合や排水性向上に。' },
+  { id: 'setogahara_horse', name: '完熟馬糞堆肥', maker: '瀬戸ヶ原花苑', category: 'organic', description: '土壌改良の王様。ふかふかの土を作る。' },
+  { id: 'hyponex_magamp', name: 'マグァンプK', maker: 'ハイポネックス', category: 'adjust', description: '元肥として土に混ぜ込む定番肥料。' },
+  { id: 'kuntan', name: 'もみ殻くん炭', maker: '一般', category: 'adjust', description: '通気性・保水性の改善、根腐れ防止。' },
+  { id: 'perlite', name: 'パーライト', maker: '一般', category: 'adjust', description: '軽量で排水性を高める。ハンギング等に。' },
 ];
 
 // --- Rose Database ---

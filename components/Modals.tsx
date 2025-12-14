@@ -596,15 +596,16 @@ export const CareModal: React.FC<CareModalProps> = ({
             <div className="mb-4 animate-fade-in">
                  <label className="block text-[10px] font-bold opacity-50 uppercase text-center mb-2">使用した用土（複数選択可）</label>
                  
-                 {/* Soil Selector */}
-                 <div className="flex flex-wrap gap-2 justify-center mb-4">
+                 {/* Soil Selector Grid */}
+                 <div className="grid grid-cols-2 gap-2 mb-4">
                      {SOIL_LIBRARY.map(soil => (
                          <button
                             key={soil.id}
                             onClick={() => handleAddSoil(soil.id)}
-                            className="text-xs px-2 py-1 bg-white border border-gray-200 rounded hover:bg-amber-50 hover:text-amber-800 hover:border-amber-200 transition-colors"
+                            className="p-2 bg-white border border-gray-200 rounded-md hover:border-amber-400 hover:bg-amber-50 transition-all text-left flex flex-col shadow-sm group"
                          >
-                             {soil.name}
+                             <span className="text-[10px] text-gray-500 group-hover:text-amber-700">{soil.maker}</span>
+                             <span className="text-xs font-bold text-gray-800 group-hover:text-amber-900 leading-tight">{soil.name}</span>
                          </button>
                      ))}
                  </div>
@@ -618,7 +619,10 @@ export const CareModal: React.FC<CareModalProps> = ({
                              
                              return (
                                  <div key={comp.soilId} className="flex items-center gap-2">
-                                     <span className="flex-1 text-sm font-medium text-gray-700">{def?.name}</span>
+                                     <div className="flex-1 min-w-0">
+                                        <div className="text-xs font-bold text-gray-700 truncate">{def?.name}</div>
+                                        <div className="text-[10px] text-gray-400 truncate">{def?.maker}</div>
+                                     </div>
                                      <div className="flex items-center gap-1">
                                          <input 
                                             type="number"

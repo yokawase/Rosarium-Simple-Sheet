@@ -28,7 +28,9 @@ export interface Rose {
 export interface SoilDefinition {
   id: string;
   name: string;
-  category: 'base' | 'organic' | 'adjust'; // Base soil, Organic matter, Adjustment
+  maker: string; // New: Manufacturer name
+  description?: string; // New: Description of the soil
+  category: 'mix' | 'base' | 'organic' | 'adjust'; // mix = Cultivation Soil (Baiyoudo)
 }
 
 export interface SoilMixComponent {
