@@ -9,6 +9,7 @@ interface SheetProps {
   events: CareEvent[];
   onOpenRoseModal: (rose?: Rose) => void;
   onOpenCareModal: (year: number, month: number, rose: Rose) => void;
+  initialTarget?: { year: number, month: number } | null;
 }
 
 const IconComponent = React.memo(({ name, className, color, size = 14 }: { name: string, className?: string, color?: string, size?: number }) => {
@@ -16,13 +17,34 @@ const IconComponent = React.memo(({ name, className, color, size = 14 }: { name:
   return <Icon className={className} size={size} stroke={color} strokeWidth={2.5} />;
 });
 
-export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, onOpenCareModal }) => {
+export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, onOpenCareModal, initialTarget }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Initialize with current year and next year
+  // Initialize years based on actual data range + current year
   const [years, setYears] = useState<number[]>(() => {
     const current = new Date().getFullYear();
-    return [current, current + 1];
+    
+    // Determine the base range from events
+    let rangeStart = current;
+    let rangeEnd = current + 1;
+
+    if (events.length > 0) {
+        const eventYears = events.map(e => parseInt(e.date.split('-')[0]));
+        rangeStart = Math.min(rangeStart, Math.min(...eventYears));
+        rangeEnd = Math.max(rangeEnd, Math.max(...eventYears));
+    }
+
+    // Extend range if initialTarget is provided
+    if (initialTarget) {
+        rangeStart = Math.min(rangeStart, initialTarget.year);
+        rangeEnd = Math.max(rangeEnd, initialTarget.year);
+    }
+    
+    const range = [];
+    for (let y = rangeStart; y <= rangeEnd; y++) {
+        range.push(y);
+    }
+    return range;
   });
 
   // Track scroll position for restoration when prepending years
@@ -31,6 +53,47 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
     previousScrollWidth: 0, 
     previousScrollLeft: 0 
   });
+
+  // Initial Scroll Logic
+  useLayoutEffect(() => {
+    const today = new Date();
+    const targetYear = initialTarget ? initialTarget.year : today.getFullYear();
+    const targetMonth = initialTarget ? initialTarget.month : today.getMonth() + 1;
+
+    // Small delay to ensure DOM is fully painted with the correct width
+    // (Sometimes strictly synchronous layout effect is too fast for dynamic content)
+    requestAnimationFrame(() => {
+        const currentId = `header-${targetYear}-${targetMonth}`;
+        const element = document.getElementById(currentId);
+        const container = containerRef.current;
+
+        if (element && container) {
+            const containerWidth = container.clientWidth;
+            const elementLeft = element.offsetLeft;
+            const elementWidth = element.offsetWidth;
+            
+            // Sidebar width (Sticky header)
+            const sidebarWidth = 260;
+            
+            const visibleSpace = containerWidth - sidebarWidth;
+            let scrollLeft;
+            
+            // Center the target month in the visible area
+            if (visibleSpace > elementWidth) {
+                const targetCenterInVisible = sidebarWidth + (visibleSpace / 2);
+                const elementCenter = elementLeft + (elementWidth / 2);
+                scrollLeft = elementCenter - targetCenterInVisible;
+            } else {
+                scrollLeft = elementLeft - sidebarWidth;
+            }
+
+            container.scrollTo({
+                left: scrollLeft,
+                behavior: 'instant'
+            });
+        }
+    });
+  }, [initialTarget]); 
 
   const handleScroll = () => {
     if (!containerRef.current) return;
@@ -45,11 +108,9 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
     }
     
     // Add Past Year (Left Scroll)
-    // Threshold needs to be large enough to trigger, but we must debounce/lock to prevent loop
     if (scrollLeft < 50 && !scrollState.current.isPrepending) {
        const firstYear = years[0];
-       if(firstYear > 2020) { 
-            // Capture current state before update
+       if(firstYear > 2000) { 
             scrollState.current = {
                 isPrepending: true,
                 previousScrollWidth: scrollWidth,
@@ -67,10 +128,7 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
         const newScrollWidth = containerRef.current.scrollWidth;
         const diff = newScrollWidth - previousScrollWidth;
         
-        // Adjust scrollLeft so the user stays on the same visual element
         containerRef.current.scrollLeft = previousScrollLeft + diff;
-        
-        // Reset flag
         scrollState.current.isPrepending = false;
     }
   }, [years]);
@@ -93,7 +151,7 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
 
   return (
     <div 
-      className="flex-grow overflow-auto bg-white relative"
+      className="flex-grow overflow-auto bg-white relative custom-scrollbar"
       id="sheet-scroll-container"
       ref={containerRef}
       onScroll={handleScroll}
@@ -104,7 +162,10 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
             {/* Sticky Top-Left Corner */}
             <th className="sticky left-0 top-0 z-50 w-[260px] min-w-[260px] p-4 bg-[#FDFBF7] border-r border-b border-gray-200 shadow-[1px_1px_0_rgba(226,232,240,1)] text-left">
               <div className="flex justify-between items-center">
-                <span className="font-serif italic text-xl font-bold opacity-80">Rose Variety</span>
+                <div className="flex items-baseline gap-2">
+                    <span className="font-serif italic text-xl font-bold opacity-80">Rose Variety</span>
+                    <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full">{roses.length}</span>
+                </div>
                 <button 
                   onClick={() => onOpenRoseModal()}
                   className="w-8 h-8 rounded-full bg-green-50 text-green-700 hover:bg-green-100 flex items-center justify-center transition-colors shadow-sm"
@@ -124,11 +185,11 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
                   return (
                     <th 
                       key={`${year}-${month}`}
+                      id={`header-${year}-${month}`}
                       className={`sticky top-0 z-40 min-h-16 h-auto py-2 min-w-[80px] w-[80px] bg-[#FDFBF7] border-b border-gray-200 border-r border-gray-100 ${isYearStart ? 'border-l-2 border-l-gray-300' : ''}`}
                     >
                       {month === 1 ? (
                         <div className="flex flex-col items-center justify-center h-full">
-                          {/* Increased font size for Year */}
                           <span className="font-bold text-gray-800 text-3xl font-serif">{year}</span>
                           <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-1">Jan</span>
                         </div>
@@ -147,7 +208,6 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
         <tbody>
           {roses.map(rose => {
             const brandInfo = BRAND_MASTER[rose.brand];
-            // Simplification: Extract just the country or short name for display space
             const displayBrand = brandInfo ? brandInfo.label.split('(')[0] : rose.brand; 
 
             return (

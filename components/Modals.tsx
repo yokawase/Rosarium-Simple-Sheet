@@ -353,6 +353,7 @@ export const CareModal: React.FC<CareModalProps> = ({
   
   const [day, setDay] = useState<number>(new Date().getDate());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Photo States
   const [beforeImage, setBeforeImage] = useState<string | null>(null);
@@ -397,15 +398,17 @@ export const CareModal: React.FC<CareModalProps> = ({
     setSoilMix([]);
     setPotChange({ mode: 'same', fromSize: 8, toSize: 8 });
     setDay(new Date().getDate());
+    setShowDeleteConfirm(false);
   };
 
   // Reset details when type changes (unless editing)
   useEffect(() => {
+      // Fix: Check if editingId is present to prevent clearing data during edit setup
       if (!editingId && selectedType) {
         setSelectedProductId("");
         setSoilMix([]);
       }
-  }, [selectedType]);
+  }, [selectedType, editingId]); // Added editingId to dependency to ensure correct evaluation
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isBefore: boolean) => {
     const file = e.target.files?.[0];
@@ -440,7 +443,7 @@ export const CareModal: React.FC<CareModalProps> = ({
   // Handle Edit Click
   const handleEditClick = (ev: CareEvent) => {
       setEditingId(ev.id);
-      setSelectedType(ev.typeId);
+      setSelectedType(ev.typeId); // This triggers useEffect, but editingId is set now, so it shouldn't clear
       const eventDay = parseInt(ev.date.split('-')[2]);
       setDay(eventDay);
       setSelectedProductId(ev.productId || "");
@@ -448,6 +451,7 @@ export const CareModal: React.FC<CareModalProps> = ({
       setPotChange(ev.potChange || { mode: 'same', fromSize: 8, toSize: 8 });
       setBeforeImage(ev.images?.before || null);
       setAfterImage(ev.images?.after || null);
+      setShowDeleteConfirm(false);
       
       // Scroll to input top (which is now under the date picker)
       if (inputRef.current) {
@@ -769,17 +773,26 @@ export const CareModal: React.FC<CareModalProps> = ({
                     {editingId ? '更新する' : '記録する'}
                 </button>
                 {editingId && (
-                    <button 
-                        onClick={() => {
-                            if(editingId && window.confirm("この記録を削除しますか？")) {
-                                onDeleteEvent(editingId);
-                                resetForm();
-                            }
-                        }}
-                        className="px-4 py-2.5 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors"
-                    >
-                        <Trash2 size={18} />
-                    </button>
+                    !showDeleteConfirm ? (
+                        <button 
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="px-4 py-2.5 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors"
+                        >
+                            <Trash2 size={18} />
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={() => {
+                                if(editingId) {
+                                    onDeleteEvent(editingId);
+                                    resetForm();
+                                }
+                            }}
+                            className="px-4 py-2.5 bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors text-xs font-bold"
+                        >
+                            削除確定
+                        </button>
+                    )
                 )}
             </div>
         </div>

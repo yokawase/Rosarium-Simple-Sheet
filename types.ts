@@ -68,7 +68,7 @@ export interface GardenData {
 }
 
 // View State
-export type ViewMode = 'sheet' | 'dashboard' | 'album';
+export type ViewMode = 'sheet' | 'dashboard' | 'album' | 'batch';
 
 // App Settings
 export type FontSize = 'normal' | 'large' | 'xl';

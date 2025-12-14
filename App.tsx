@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Flower, BarChart3, Grid, Image as ImageIcon, Settings as SettingsIcon } from 'lucide-react';
+import { Flower, BarChart3, Grid, Image as ImageIcon, Settings as SettingsIcon, Layers } from 'lucide-react';
 import { Sheet } from './components/Sheet';
 import { Dashboard } from './components/Dashboard';
 import { Album } from './components/Album';
+import { BatchEntry } from './components/BatchEntry';
 import { RoseFormModal, CareModal, SettingsModal } from './components/Modals';
 import { Rose, CareEvent, ViewMode, AppSettings } from './types';
 import { INITIAL_ROSES, CARE_TYPES } from './constants';
@@ -30,6 +31,9 @@ const App: React.FC = () => {
   const [roses, setRoses] = useState<Rose[]>(INITIAL_ROSES);
   const [events, setEvents] = useState<CareEvent[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+
+  // Focus Date for Sheet (used after Batch Entry)
+  const [sheetTargetDate, setSheetTargetDate] = useState<{year: number, month: number} | null>(null);
 
   // Load on mount
   useEffect(() => {
@@ -100,6 +104,10 @@ const App: React.FC = () => {
     setEvents(prev => [...prev, event]);
   };
 
+  const handleAddBatchEvents = (newEvents: CareEvent[]) => {
+    setEvents(prev => [...prev, ...newEvents]);
+  };
+
   const handleUpdateEvent = (updatedEvent: CareEvent) => {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
   };
@@ -131,6 +139,11 @@ const App: React.FC = () => {
 
   // Inject a global style for High Contrast overrides if needed
   const highContrastClass = settings.highContrast ? "high-contrast-mode" : "";
+
+  // Generate a key for Sheet that changes when data or target changes
+  // This forces React to unmount and remount the Sheet, ensuring all state is reset 
+  // and correct year columns are generated for the new data.
+  const sheetKey = `sheet-${events.length}-${sheetTargetDate ? `${sheetTargetDate.year}-${sheetTargetDate.month}` : 'default'}`;
 
   return (
     <div 
@@ -182,11 +195,18 @@ const App: React.FC = () => {
         <div className="flex items-center space-x-2">
             <nav className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
             <button 
-                onClick={() => setView('sheet')}
+                onClick={() => { setView('sheet'); setSheetTargetDate(null); }}
                 className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'sheet' ? 'bg-white text-green-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
                 <Grid size={16} />
                 <span className="hidden md:inline">SHEET</span>
+            </button>
+            <button 
+                onClick={() => { setView('batch'); setSheetTargetDate(null); }}
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'batch' ? 'bg-white text-green-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+                <Layers size={16} />
+                <span className="hidden md:inline">BATCH</span>
             </button>
             <button 
                 onClick={() => setView('dashboard')}
@@ -231,10 +251,21 @@ const App: React.FC = () => {
       <main className="flex-grow flex flex-col relative overflow-hidden">
         {view === 'sheet' ? (
           <Sheet 
+            key={sheetKey} // CRITICAL: Forces remount on data change
             roses={roses} 
             events={events}
             onOpenRoseModal={handleOpenRoseModal}
             onOpenCareModal={handleOpenCareModal}
+            initialTarget={sheetTargetDate}
+          />
+        ) : view === 'batch' ? (
+          <BatchEntry 
+            roses={roses}
+            onAddBatchEvents={handleAddBatchEvents}
+            onComplete={(target) => {
+                if (target) setSheetTargetDate(target);
+                setView('sheet');
+            }}
           />
         ) : view === 'dashboard' ? (
           <Dashboard roses={roses} events={events} />
