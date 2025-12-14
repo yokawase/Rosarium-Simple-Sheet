@@ -38,7 +38,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }) => {
               <X size={20} />
             </button>
         )}
-        <div className="p-6 bg-white overflow-y-auto">
+        <div className="p-0 bg-white overflow-y-auto flex-grow flex flex-col">
           {children}
         </div>
       </div>
@@ -66,7 +66,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="表示設定">
-      <div className="space-y-8">
+      <div className="p-6 space-y-8">
         
         {/* Font Size */}
         <div>
@@ -211,7 +211,7 @@ export const RoseFormModal: React.FC<RoseFormModalProps> = ({ isOpen, onClose, o
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={initialData ? "バラ情報の編集" : "新しいバラをお迎え"}>
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5 p-6">
         
         {/* Name Input with Autocomplete */}
         <div className="relative">
@@ -363,11 +363,28 @@ export const CareModal: React.FC<CareModalProps> = ({
   const [potChange, setPotChange] = useState<PotChangeDetail>({ mode: 'same', fromSize: 8, toSize: 8 });
 
   const inputRef = useRef<HTMLDivElement>(null);
+  const daysContainerRef = useRef<HTMLDivElement>(null);
+
+  // Calculate days in month
+  const daysInMonth = useMemo(() => new Date(year, month, 0).getDate(), [year, month]);
+  const daysArray = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth]);
 
   // Reset when modal opens/closes
   useEffect(() => {
     if(isOpen) {
         resetForm();
+    }
+  }, [isOpen]);
+
+  // Scroll to selected day when opened
+  useEffect(() => {
+    if (isOpen && daysContainerRef.current) {
+        setTimeout(() => {
+            const selectedButton = daysContainerRef.current?.querySelector(`[data-day="${day}"]`) as HTMLButtonElement;
+            if (selectedButton) {
+                selectedButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }, 100);
     }
   }, [isOpen]);
 
@@ -424,16 +441,26 @@ export const CareModal: React.FC<CareModalProps> = ({
   const handleEditClick = (ev: CareEvent) => {
       setEditingId(ev.id);
       setSelectedType(ev.typeId);
-      setDay(parseInt(ev.date.split('-')[2]));
+      const eventDay = parseInt(ev.date.split('-')[2]);
+      setDay(eventDay);
       setSelectedProductId(ev.productId || "");
       setSoilMix(ev.soilMix || []);
       setPotChange(ev.potChange || { mode: 'same', fromSize: 8, toSize: 8 });
       setBeforeImage(ev.images?.before || null);
       setAfterImage(ev.images?.after || null);
       
-      // Scroll to top
+      // Scroll to input top (which is now under the date picker)
       if (inputRef.current) {
           inputRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+      // Also scroll the date picker to the edited day
+      if (daysContainerRef.current) {
+          setTimeout(() => {
+            const selectedButton = daysContainerRef.current?.querySelector(`[data-day="${eventDay}"]`) as HTMLButtonElement;
+            if (selectedButton) {
+                selectedButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+          }, 50);
       }
   };
 
@@ -484,328 +511,350 @@ export const CareModal: React.FC<CareModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="お世話の記録">
-      <div className="text-center mb-6">
-        <h4 className="text-2xl font-serif text-gray-900 italic">{rose.name}</h4>
-        <p className="text-sm opacity-60 tracking-widest uppercase mt-1">{year}年 {month}月</p>
-      </div>
-
-      {/* Input Section */}
-      <div ref={inputRef} className={`p-4 rounded-lg border mb-6 shadow-sm transition-colors ${editingId ? 'bg-orange-50 border-orange-200' : 'bg-[#FDFBF7] border-green-100/50'}`}>
-        <div className="flex justify-between items-center mb-3">
-             <label className={`block text-xs font-bold uppercase ${editingId ? 'text-orange-600' : 'opacity-50'}`}>
-                {editingId ? '記録を編集' : '新規記録'}
-             </label>
-             {editingId && (
-                 <button onClick={handleCancelEdit} className="text-xs text-gray-400 hover:text-gray-600 underline">
-                     キャンセル
+      {/* Scrollable Date Picker */}
+      <div className="bg-[#FDFBF7] border-b border-gray-100 sticky top-0 z-20">
+          <div className="pt-2 px-6 flex justify-between items-end mb-2">
+            <div>
+                 <p className="text-xs font-bold opacity-50 uppercase tracking-widest text-green-800">{year}年</p>
+                 <h4 className="text-xl font-serif text-green-900 font-bold leading-none">{month}月</h4>
+            </div>
+            <p className="text-sm font-serif italic opacity-60 truncate max-w-[150px]">{rose.name}</p>
+          </div>
+          
+          <div 
+            ref={daysContainerRef}
+            className="flex overflow-x-auto gap-2 px-6 pb-4 no-scrollbar snap-x scroll-smooth"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+             <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+             {daysArray.map(d => (
+                 <button
+                    key={d}
+                    data-day={d}
+                    type="button"
+                    onClick={() => setDay(d)}
+                    className={`flex-none w-10 h-14 rounded-full flex flex-col items-center justify-center transition-all snap-center border shrink-0 ${
+                        day === d 
+                        ? 'bg-green-700 border-green-700 text-white shadow-lg scale-110 z-10' 
+                        : 'bg-white border-gray-200 text-gray-400 hover:border-green-300 hover:text-green-600'
+                    }`}
+                 >
+                     <span className="text-[9px] font-bold uppercase opacity-60 leading-none mb-0.5">Day</span>
+                     <span className="text-xl font-serif font-bold leading-none">{d}</span>
                  </button>
-             )}
-        </div>
-        
-        <div className="flex items-center justify-center space-x-2 mb-4">
-            <span className="opacity-70 text-sm font-serif">{month}月</span>
-            <input 
-                type="number" 
-                min="1" max="31"
-                value={day}
-                onChange={(e) => setDay(parseInt(e.target.value))}
-                className="w-16 p-2 text-center border border-gray-300 rounded focus:border-green-500 outline-none font-serif text-lg bg-white text-gray-900"
-            />
-            <span className="opacity-70 text-sm">日</span>
-        </div>
+             ))}
+             {/* Spacer for right padding */}
+             <div className="w-4 flex-none" />
+          </div>
+      </div>
 
-        {/* 1. Select Care Type */}
-        <div className="flex flex-wrap justify-center gap-3 mb-4">
-          {CARE_TYPES.map(type => (
-            <button
-              key={type.id}
-              type="button"
-              onClick={() => setSelectedType(type.id)}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                selectedType === type.id 
-                  ? `${type.bgColor} text-white ring-2 ring-offset-2 ring-green-600 scale-110 shadow-md` 
-                  : `${type.bgColor} text-white opacity-40 hover:opacity-80`
-              }`}
-              title={type.label}
-            >
-             <IconComponent name={type.iconName} size={14} color="white" />
-            </button>
-          ))}
-        </div>
-        
-        <div className="text-center text-xs h-4 mb-4 text-green-700 font-bold">
-            {selectedType ? CARE_TYPES.find(t => t.id === selectedType)?.label : '作業を選択してください'}
-        </div>
-
-        {/* --- Pot Change UI (When 'repot' is selected) --- */}
-        {selectedType === 'repot' && (
-            <div className="mb-4 animate-fade-in space-y-4">
-                <div className="flex justify-center gap-2">
-                    <button 
-                        onClick={() => setPotChange({ ...potChange, mode: 'up' })}
-                        className={`px-3 py-2 rounded-md text-xs font-bold flex items-center gap-1 transition-colors ${potChange.mode === 'up' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-white border border-gray-200 text-gray-500'}`}
-                    >
-                        <TrendingUp size={14} /> 鉢増し
+      <div className="p-6">
+        {/* Input Section */}
+        <div ref={inputRef} className={`p-4 rounded-lg border mb-6 shadow-sm transition-colors ${editingId ? 'bg-orange-50 border-orange-200' : 'bg-[#FDFBF7] border-green-100/50'}`}>
+            <div className="flex justify-between items-center mb-3">
+                <label className={`block text-xs font-bold uppercase ${editingId ? 'text-orange-600' : 'opacity-50'}`}>
+                    {editingId ? '記録を編集' : '新規記録'} ({month}月{day}日)
+                </label>
+                {editingId && (
+                    <button onClick={handleCancelEdit} className="text-xs text-gray-400 hover:text-gray-600 underline">
+                        キャンセル
                     </button>
-                    <button 
-                         onClick={() => setPotChange({ ...potChange, mode: 'same' })}
-                         className={`px-3 py-2 rounded-md text-xs font-bold flex items-center gap-1 transition-colors ${potChange.mode === 'same' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-white border border-gray-200 text-gray-500'}`}
-                    >
-                        <Minus size={14} /> 維持
-                    </button>
-                    <button 
-                         onClick={() => setPotChange({ ...potChange, mode: 'down' })}
-                         className={`px-3 py-2 rounded-md text-xs font-bold flex items-center gap-1 transition-colors ${potChange.mode === 'down' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-white border border-gray-200 text-gray-500'}`}
-                    >
-                        <TrendingDown size={14} /> 鉢下げ
-                    </button>
-                </div>
-                
-                <div className="flex items-center justify-center gap-3">
-                    <div className="flex flex-col items-center">
-                        <label className="text-[10px] text-gray-400 mb-1">From</label>
-                        <div className="flex items-center">
-                            <input 
-                                type="number" 
-                                className="w-12 p-1 text-center border border-gray-300 rounded text-sm"
-                                value={potChange.fromSize}
-                                onChange={(e) => setPotChange({...potChange, fromSize: parseInt(e.target.value)})}
-                            />
-                            <span className="text-xs ml-1">号</span>
-                        </div>
-                    </div>
-                    <ArrowRight size={16} className="text-gray-300 mt-4" />
-                    <div className="flex flex-col items-center">
-                        <label className="text-[10px] text-gray-400 mb-1">To</label>
-                        <div className="flex items-center">
-                            <input 
-                                type="number" 
-                                className="w-12 p-1 text-center border border-gray-300 rounded text-sm"
-                                value={potChange.toSize}
-                                onChange={(e) => setPotChange({...potChange, toSize: parseInt(e.target.value)})}
-                            />
-                             <span className="text-xs ml-1">号</span>
-                        </div>
-                    </div>
-                </div>
+                )}
             </div>
-        )}
 
-        {/* --- Soil Mix UI (When 'soil' is selected) --- */}
-        {selectedType === 'soil' && (
-            <div className="mb-4 animate-fade-in">
-                 <label className="block text-[10px] font-bold opacity-50 uppercase text-center mb-2">使用した用土（複数選択可）</label>
-                 
-                 {/* Soil Selector Grid */}
-                 <div className="grid grid-cols-2 gap-2 mb-4">
-                     {SOIL_LIBRARY.map(soil => (
-                         <button
-                            key={soil.id}
-                            onClick={() => handleAddSoil(soil.id)}
-                            className="p-2 bg-white border border-gray-200 rounded-md hover:border-amber-400 hover:bg-amber-50 transition-all text-left flex flex-col shadow-sm group"
-                         >
-                             <span className="text-[10px] text-gray-500 group-hover:text-amber-700">{soil.maker}</span>
-                             <span className="text-xs font-bold text-gray-800 group-hover:text-amber-900 leading-tight">{soil.name}</span>
-                         </button>
-                     ))}
-                 </div>
-
-                 {/* Mixed List */}
-                 {soilMix.length > 0 && (
-                     <div className="bg-white rounded-md border border-gray-200 p-3 space-y-2">
-                         {soilMix.map((comp) => {
-                             const def = SOIL_LIBRARY.find(s => s.id === comp.soilId);
-                             const percent = soilTotal > 0 ? Math.round((comp.value / soilTotal) * 100) : 0;
-                             
-                             return (
-                                 <div key={comp.soilId} className="flex items-center gap-2">
-                                     <div className="flex-1 min-w-0">
-                                        <div className="text-xs font-bold text-gray-700 truncate">{def?.name}</div>
-                                        <div className="text-[10px] text-gray-400 truncate">{def?.maker}</div>
-                                     </div>
-                                     <div className="flex items-center gap-1">
-                                         <input 
-                                            type="number"
-                                            min="0"
-                                            value={comp.value}
-                                            onChange={(e) => handleSoilValueChange(comp.soilId, parseFloat(e.target.value))}
-                                            className="w-12 p-1 text-right border border-gray-300 rounded text-sm"
-                                         />
-                                         <span className="text-xs text-gray-400 w-8">part</span>
-                                     </div>
-                                     <div className="w-10 text-right text-xs font-bold text-amber-600">{percent}%</div>
-                                     <button onClick={() => removeSoil(comp.soilId)} className="text-gray-300 hover:text-red-400">
-                                         <X size={14} />
-                                     </button>
-                                 </div>
-                             )
-                         })}
-                         <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
-                             <span className="text-xs text-gray-400">Total: {soilTotal} parts</span>
-                         </div>
-                     </div>
-                 )}
-            </div>
-        )}
-
-        {/* 2. Select Product (If available for type) */}
-        {availableProducts.length > 0 && (
-            <div className="mb-4 animate-fade-in">
-                <label className="block text-[10px] font-bold opacity-50 uppercase text-center mb-2">使用した薬剤・肥料</label>
-                <div className="grid grid-cols-1 gap-2">
-                    {availableProducts.map(prod => (
-                        <button
-                            key={prod.id}
-                            type="button"
-                            onClick={() => setSelectedProductId(prod.id === selectedProductId ? "" : prod.id)}
-                            className={`p-2 rounded-md border text-left text-sm flex items-center transition-all ${
-                                selectedProductId === prod.id
-                                    ? 'bg-white border-green-500 ring-1 ring-green-500 text-green-800 shadow-sm'
-                                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-400'
-                            }`}
-                        >
-                            <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: prod.color }}></div>
-                            <div className="flex-1">
-                                <div className="font-bold">{prod.name}</div>
-                                <div className="text-[10px] opacity-60 truncate">{prod.maker}</div>
-                            </div>
-                            {selectedProductId === prod.id && <Check size={14} className="text-green-600" />}
-                        </button>
-                    ))}
-                </div>
-            </div>
-        )}
-
-        {/* --- Pruning Photo Upload UI --- */}
-        {selectedType === 'pruning' && (
-            <div className="mb-4 grid grid-cols-2 gap-3 animate-fade-in">
-                {/* Before Photo */}
-                <div className="space-y-1">
-                    <label className="block text-[10px] font-bold opacity-50 uppercase text-center">Before</label>
-                    <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden bg-white">
-                        {beforeImage ? (
-                            <img src={beforeImage} alt="Before" className="w-full h-full object-cover" />
-                        ) : (
-                            <>
-                                <Camera className="text-gray-400 mb-1" size={20} />
-                                <span className="text-[9px] text-gray-400">撮影/選択</span>
-                            </>
-                        )}
-                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, true)} />
-                    </label>
-                </div>
-                {/* After Photo */}
-                <div className="space-y-1">
-                    <label className="block text-[10px] font-bold opacity-50 uppercase text-center">After</label>
-                    <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden bg-white">
-                        {afterImage ? (
-                            <img src={afterImage} alt="After" className="w-full h-full object-cover" />
-                        ) : (
-                            <>
-                                <Camera className="text-gray-400 mb-1" size={20} />
-                                <span className="text-[9px] text-gray-400">撮影/選択</span>
-                            </>
-                        )}
-                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, false)} />
-                    </label>
-                </div>
-            </div>
-        )}
-
-        <div className="flex gap-2">
-            <button 
-                onClick={handleSave}
-                disabled={!selectedType}
-                className={`flex-1 py-2.5 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm transition-all shadow-sm active:scale-95 ${editingId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-700 hover:bg-green-800'}`}
-            >
-                {editingId ? '更新する' : '記録する'}
-            </button>
-            {editingId && (
-                <button 
-                    onClick={() => {
-                        if(editingId && window.confirm("この記録を削除しますか？")) {
-                            onDeleteEvent(editingId);
-                            resetForm();
-                        }
-                    }}
-                    className="px-4 py-2.5 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors"
+            {/* 1. Select Care Type */}
+            <div className="flex flex-wrap justify-center gap-3 mb-4">
+            {CARE_TYPES.map(type => (
+                <button
+                key={type.id}
+                type="button"
+                onClick={() => setSelectedType(type.id)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                    selectedType === type.id 
+                    ? `${type.bgColor} text-white ring-2 ring-offset-2 ring-green-600 scale-110 shadow-md` 
+                    : `${type.bgColor} text-white opacity-40 hover:opacity-80`
+                }`}
+                title={type.label}
                 >
-                    <Trash2 size={18} />
+                <IconComponent name={type.iconName} size={14} color="white" />
                 </button>
-            )}
-        </div>
-      </div>
+            ))}
+            </div>
+            
+            <div className="text-center text-xs h-4 mb-4 text-green-700 font-bold">
+                {selectedType ? CARE_TYPES.find(t => t.id === selectedType)?.label : '作業を選択してください'}
+            </div>
 
-      {/* Existing Records */}
-      <div>
-        <div className="flex justify-between items-end mb-2 border-b border-gray-100 pb-1">
-            <label className="block text-xs font-bold opacity-50 uppercase">履歴 (タップして編集)</label>
+            {/* --- Pot Change UI (When 'repot' is selected) --- */}
+            {selectedType === 'repot' && (
+                <div className="mb-4 animate-fade-in space-y-4">
+                    <div className="flex justify-center gap-2">
+                        <button 
+                            onClick={() => setPotChange({ ...potChange, mode: 'up' })}
+                            className={`px-3 py-2 rounded-md text-xs font-bold flex items-center gap-1 transition-colors ${potChange.mode === 'up' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-white border border-gray-200 text-gray-500'}`}
+                        >
+                            <TrendingUp size={14} /> 鉢増し
+                        </button>
+                        <button 
+                            onClick={() => setPotChange({ ...potChange, mode: 'same' })}
+                            className={`px-3 py-2 rounded-md text-xs font-bold flex items-center gap-1 transition-colors ${potChange.mode === 'same' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-white border border-gray-200 text-gray-500'}`}
+                        >
+                            <Minus size={14} /> 維持
+                        </button>
+                        <button 
+                            onClick={() => setPotChange({ ...potChange, mode: 'down' })}
+                            className={`px-3 py-2 rounded-md text-xs font-bold flex items-center gap-1 transition-colors ${potChange.mode === 'down' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-white border border-gray-200 text-gray-500'}`}
+                        >
+                            <TrendingDown size={14} /> 鉢下げ
+                        </button>
+                    </div>
+                    
+                    <div className="flex items-center justify-center gap-3">
+                        <div className="flex flex-col items-center">
+                            <label className="text-[10px] text-gray-400 mb-1">From</label>
+                            <div className="flex items-center">
+                                <input 
+                                    type="number" 
+                                    className="w-12 p-1 text-center border border-gray-300 rounded text-sm"
+                                    value={potChange.fromSize}
+                                    onChange={(e) => setPotChange({...potChange, fromSize: parseInt(e.target.value)})}
+                                />
+                                <span className="text-xs ml-1">号</span>
+                            </div>
+                        </div>
+                        <ArrowRight size={16} className="text-gray-300 mt-4" />
+                        <div className="flex flex-col items-center">
+                            <label className="text-[10px] text-gray-400 mb-1">To</label>
+                            <div className="flex items-center">
+                                <input 
+                                    type="number" 
+                                    className="w-12 p-1 text-center border border-gray-300 rounded text-sm"
+                                    value={potChange.toSize}
+                                    onChange={(e) => setPotChange({...potChange, toSize: parseInt(e.target.value)})}
+                                />
+                                <span className="text-xs ml-1">号</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- Soil Mix UI (When 'soil' is selected) --- */}
+            {selectedType === 'soil' && (
+                <div className="mb-4 animate-fade-in">
+                    <label className="block text-[10px] font-bold opacity-50 uppercase text-center mb-2">使用した用土（複数選択可）</label>
+                    
+                    {/* Soil Selector Grid */}
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                        {SOIL_LIBRARY.map(soil => (
+                            <button
+                                key={soil.id}
+                                onClick={() => handleAddSoil(soil.id)}
+                                className="p-2 bg-white border border-gray-200 rounded-md hover:border-amber-400 hover:bg-amber-50 transition-all text-left flex flex-col shadow-sm group"
+                            >
+                                <span className="text-[10px] text-gray-500 group-hover:text-amber-700">{soil.maker}</span>
+                                <span className="text-xs font-bold text-gray-800 group-hover:text-amber-900 leading-tight">{soil.name}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Mixed List */}
+                    {soilMix.length > 0 && (
+                        <div className="bg-white rounded-md border border-gray-200 p-3 space-y-2">
+                            {soilMix.map((comp) => {
+                                const def = SOIL_LIBRARY.find(s => s.id === comp.soilId);
+                                const percent = soilTotal > 0 ? Math.round((comp.value / soilTotal) * 100) : 0;
+                                
+                                return (
+                                    <div key={comp.soilId} className="flex items-center gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-xs font-bold text-gray-700 truncate">{def?.name}</div>
+                                            <div className="text-[10px] text-gray-400 truncate">{def?.maker}</div>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <input 
+                                                type="number"
+                                                min="0"
+                                                value={comp.value}
+                                                onChange={(e) => handleSoilValueChange(comp.soilId, parseFloat(e.target.value))}
+                                                className="w-12 p-1 text-right border border-gray-300 rounded text-sm"
+                                            />
+                                            <span className="text-xs text-gray-400 w-8">part</span>
+                                        </div>
+                                        <div className="w-10 text-right text-xs font-bold text-amber-600">{percent}%</div>
+                                        <button onClick={() => removeSoil(comp.soilId)} className="text-gray-300 hover:text-red-400">
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                )
+                            })}
+                            <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
+                                <span className="text-xs text-gray-400">Total: {soilTotal} parts</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 2. Select Product (If available for type) */}
+            {availableProducts.length > 0 && (
+                <div className="mb-4 animate-fade-in">
+                    <label className="block text-[10px] font-bold opacity-50 uppercase text-center mb-2">使用した薬剤・肥料</label>
+                    <div className="grid grid-cols-1 gap-2">
+                        {availableProducts.map(prod => (
+                            <button
+                                key={prod.id}
+                                type="button"
+                                onClick={() => setSelectedProductId(prod.id === selectedProductId ? "" : prod.id)}
+                                className={`p-2 rounded-md border text-left text-sm flex items-center transition-all ${
+                                    selectedProductId === prod.id
+                                        ? 'bg-white border-green-500 ring-1 ring-green-500 text-green-800 shadow-sm'
+                                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-400'
+                                }`}
+                            >
+                                <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: prod.color }}></div>
+                                <div className="flex-1">
+                                    <div className="font-bold">{prod.name}</div>
+                                    <div className="text-[10px] opacity-60 truncate">{prod.maker}</div>
+                                </div>
+                                {selectedProductId === prod.id && <Check size={14} className="text-green-600" />}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* --- Pruning Photo Upload UI --- */}
+            {selectedType === 'pruning' && (
+                <div className="mb-4 grid grid-cols-2 gap-3 animate-fade-in">
+                    {/* Before Photo */}
+                    <div className="space-y-1">
+                        <label className="block text-[10px] font-bold opacity-50 uppercase text-center">Before</label>
+                        <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden bg-white">
+                            {beforeImage ? (
+                                <img src={beforeImage} alt="Before" className="w-full h-full object-cover" />
+                            ) : (
+                                <>
+                                    <Camera className="text-gray-400 mb-1" size={20} />
+                                    <span className="text-[9px] text-gray-400">撮影/選択</span>
+                                </>
+                            )}
+                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, true)} />
+                        </label>
+                    </div>
+                    {/* After Photo */}
+                    <div className="space-y-1">
+                        <label className="block text-[10px] font-bold opacity-50 uppercase text-center">After</label>
+                        <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden bg-white">
+                            {afterImage ? (
+                                <img src={afterImage} alt="After" className="w-full h-full object-cover" />
+                            ) : (
+                                <>
+                                    <Camera className="text-gray-400 mb-1" size={20} />
+                                    <span className="text-[9px] text-gray-400">撮影/選択</span>
+                                </>
+                            )}
+                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, false)} />
+                        </label>
+                    </div>
+                </div>
+            )}
+
+            <div className="flex gap-2">
+                <button 
+                    onClick={handleSave}
+                    disabled={!selectedType}
+                    className={`flex-1 py-2.5 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm transition-all shadow-sm active:scale-95 ${editingId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-700 hover:bg-green-800'}`}
+                >
+                    {editingId ? '更新する' : '記録する'}
+                </button>
+                {editingId && (
+                    <button 
+                        onClick={() => {
+                            if(editingId && window.confirm("この記録を削除しますか？")) {
+                                onDeleteEvent(editingId);
+                                resetForm();
+                            }
+                        }}
+                        className="px-4 py-2.5 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors"
+                    >
+                        <Trash2 size={18} />
+                    </button>
+                )}
+            </div>
+        </div>
+
+        {/* Existing Records */}
+        <div className="px-6 pb-6">
+            <div className="flex justify-between items-end mb-2 border-b border-gray-100 pb-1">
+                <label className="block text-xs font-bold opacity-50 uppercase">履歴 (タップして編集)</label>
+            </div>
+            
+            <div className="max-h-40 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            {existingEvents.length === 0 && <p className="text-center text-gray-300 text-sm italic py-4">まだ記録はありません</p>}
+            {existingEvents.sort((a,b) => parseInt(b.date.split('-')[2]) - parseInt(a.date.split('-')[2])).map(ev => {
+                const type = CARE_TYPES.find(t => t.id === ev.typeId);
+                const prod = ev.productId ? PRODUCT_LIBRARY[ev.productId] : null;
+                const dayStr = ev.date.split('-')[2];
+                const hasPhotos = ev.images && (ev.images.before || ev.images.after);
+                const isBeingEdited = ev.id === editingId;
+
+                // Dynamic color based on product or default type color
+                const indicatorColor = prod ? prod.color : (type?.color || '#ccc');
+
+                return (
+                <div 
+                        key={ev.id} 
+                        onClick={() => handleEditClick(ev)}
+                        className={`flex justify-between items-center p-2.5 bg-white border rounded-md transition-all group shadow-sm cursor-pointer ${isBeingEdited ? 'border-orange-400 ring-1 ring-orange-400 bg-orange-50' : 'border-gray-100 hover:border-green-300 hover:shadow-md'}`}
+                >
+                    <div className="flex items-center space-x-3 flex-1">
+                    {/* Date Stamp Preview in List */}
+                    <div className="flex flex-col items-center justify-center w-8 h-9 rounded bg-white border shadow-sm" style={{ borderColor: indicatorColor }}>
+                        <span className="text-[10px] font-bold leading-none mb-0.5" style={{ color: indicatorColor }}>{dayStr}</span>
+                        <IconComponent name={type?.iconName || ''} size={14} color={indicatorColor} />
+                    </div>
+
+                    <div className="flex flex-col flex-1 pl-2">
+                            <span className="text-sm font-medium">{type?.label}</span>
+                            {prod && <span className="text-[10px] text-gray-500">{prod.name}</span>}
+                            {/* Detail View for Pot Change */}
+                            {ev.potChange && (
+                                <span className="text-[10px] text-orange-600 flex items-center gap-1">
+                                    {ev.potChange.mode === 'up' && <TrendingUp size={10} />}
+                                    {ev.potChange.mode === 'down' && <TrendingDown size={10} />}
+                                    {ev.potChange.fromSize}号 → {ev.potChange.toSize}号
+                                </span>
+                            )}
+                            {/* Detail View for Soil Mix */}
+                            {ev.soilMix && (
+                                <span className="text-[10px] text-amber-700 truncate max-w-[120px]">
+                                    {ev.soilMix.length}種のブレンド
+                                </span>
+                            )}
+                    </div>
+                    {hasPhotos && <Camera size={14} className="opacity-40" />}
+                    </div>
+                    
+                    {/* Pencil Icon Indicator */}
+                    <div className={`text-gray-400 px-2 ${isBeingEdited ? 'opacity-100 text-orange-500' : 'opacity-0 group-hover:opacity-100'}`}>
+                        <Pencil size={14} />
+                    </div>
+                </div>
+                )
+            })}
+            </div>
         </div>
         
-        <div className="max-h-40 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-          {existingEvents.length === 0 && <p className="text-center text-gray-300 text-sm italic py-4">まだ記録はありません</p>}
-          {existingEvents.sort((a,b) => parseInt(b.date.split('-')[2]) - parseInt(a.date.split('-')[2])).map(ev => {
-             const type = CARE_TYPES.find(t => t.id === ev.typeId);
-             const prod = ev.productId ? PRODUCT_LIBRARY[ev.productId] : null;
-             const dayStr = ev.date.split('-')[2];
-             const hasPhotos = ev.images && (ev.images.before || ev.images.after);
-             const isBeingEdited = ev.id === editingId;
-
-             // Dynamic color based on product or default type color
-             const indicatorColor = prod ? prod.color : (type?.color || '#ccc');
-
-             return (
-               <div 
-                    key={ev.id} 
-                    onClick={() => handleEditClick(ev)}
-                    className={`flex justify-between items-center p-2.5 bg-white border rounded-md transition-all group shadow-sm cursor-pointer ${isBeingEdited ? 'border-orange-400 ring-1 ring-orange-400 bg-orange-50' : 'border-gray-100 hover:border-green-300 hover:shadow-md'}`}
-               >
-                 <div className="flex items-center space-x-3 flex-1">
-                   {/* Date Stamp Preview in List */}
-                   <div className="flex flex-col items-center justify-center w-8 h-9 rounded bg-white border shadow-sm" style={{ borderColor: indicatorColor }}>
-                       <span className="text-[10px] font-bold leading-none mb-0.5" style={{ color: indicatorColor }}>{dayStr}</span>
-                       <IconComponent name={type?.iconName || ''} size={14} color={indicatorColor} />
-                   </div>
-
-                   <div className="flex flex-col flex-1 pl-2">
-                        <span className="text-sm font-medium">{type?.label}</span>
-                        {prod && <span className="text-[10px] text-gray-500">{prod.name}</span>}
-                        {/* Detail View for Pot Change */}
-                        {ev.potChange && (
-                            <span className="text-[10px] text-orange-600 flex items-center gap-1">
-                                {ev.potChange.mode === 'up' && <TrendingUp size={10} />}
-                                {ev.potChange.mode === 'down' && <TrendingDown size={10} />}
-                                {ev.potChange.fromSize}号 → {ev.potChange.toSize}号
-                            </span>
-                        )}
-                        {/* Detail View for Soil Mix */}
-                        {ev.soilMix && (
-                            <span className="text-[10px] text-amber-700 truncate max-w-[120px]">
-                                {ev.soilMix.length}種のブレンド
-                            </span>
-                        )}
-                   </div>
-                   {hasPhotos && <Camera size={14} className="opacity-40" />}
-                 </div>
-                 
-                 {/* Pencil Icon Indicator */}
-                 <div className={`text-gray-400 px-2 ${isBeingEdited ? 'opacity-100 text-orange-500' : 'opacity-0 group-hover:opacity-100'}`}>
-                    <Pencil size={14} />
-                 </div>
-               </div>
-             )
-          })}
+        {/* Close Button at bottom */}
+        <div className="px-6 pb-6 pt-2">
+            <button 
+                onClick={onClose} 
+                className="w-full py-2 bg-white border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 text-sm font-medium transition-colors"
+            >
+                閉じる
+            </button>
         </div>
-      </div>
-      
-      {/* Close Button at bottom */}
-      <div className="mt-6 border-t border-gray-100 pt-4">
-        <button 
-            onClick={onClose} 
-            className="w-full py-2 bg-white border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 text-sm font-medium transition-colors"
-        >
-            閉じる
-        </button>
       </div>
 
     </Modal>
