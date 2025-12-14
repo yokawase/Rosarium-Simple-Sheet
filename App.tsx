@@ -5,16 +5,10 @@ import { Dashboard } from './components/Dashboard';
 import { Album } from './components/Album';
 import { BatchEntry } from './components/BatchEntry';
 import { RoseFormModal, CareModal, SettingsModal } from './components/Modals';
-import { Rose, CareEvent, ViewMode, AppSettings } from './types';
+import { Rose, CareEvent, ViewMode, AppSettings, StoredData } from './types';
 import { INITIAL_ROSES, CARE_TYPES } from './constants';
 
 const STORAGE_KEY = 'rosarium_data_v1';
-
-interface StoredData {
-  roses: Rose[];
-  events: CareEvent[];
-  settings: AppSettings;
-}
 
 const DEFAULT_SETTINGS: AppSettings = {
   fontSize: 'normal',
@@ -120,6 +114,15 @@ const App: React.FC = () => {
     if(!careContext.rose) return [];
     const prefix = `${careContext.year}-${careContext.month.toString().padStart(2, '0')}`;
     return events.filter(e => e.roseId === careContext.rose?.id && e.date.startsWith(prefix));
+  };
+
+  // Import Data Handler
+  const handleImportData = (data: StoredData) => {
+      setRoses(data.roses);
+      setEvents(data.events);
+      setSettings(data.settings);
+      // Force reload of view slightly to ensure everything repaints
+      setSheetTargetDate(null);
   };
 
   // --- Styles Logic ---
@@ -300,6 +303,8 @@ const App: React.FC = () => {
         onClose={() => setSettingsModalOpen(false)}
         settings={settings}
         onUpdateSettings={setSettings}
+        currentData={{ roses, events }}
+        onImportData={handleImportData}
       />
     </div>
   );

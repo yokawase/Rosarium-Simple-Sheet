@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Pencil, Trash2, Camera, Upload, Settings, Save, Check, Search, ChevronDown, ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { X, Pencil, Trash2, Camera, Upload, Settings, Save, Check, Search, ChevronDown, ArrowRight, TrendingUp, TrendingDown, Minus, Download, FileJson, AlertTriangle } from 'lucide-react';
 import * as Icons from 'lucide-react';
-import { Rose, BrandData, CareType, CareEvent, AppSettings, FontSize, RoseDefinition, ProductDefinition, SoilMixComponent, PotChangeDetail } from '../types';
+import { Rose, BrandData, CareType, CareEvent, AppSettings, FontSize, RoseDefinition, ProductDefinition, SoilMixComponent, PotChangeDetail, StoredData } from '../types';
 import { BRAND_MASTER, CARE_TYPES, ROSE_LIBRARY, PRODUCT_LIBRARY, SOIL_LIBRARY } from '../constants';
 
 // --- Icon Helper ---
@@ -52,10 +52,23 @@ interface SettingsModalProps {
   onClose: () => void;
   settings: AppSettings;
   onUpdateSettings: (newSettings: AppSettings) => void;
+  // Data for export/import
+  currentData: { roses: Rose[], events: CareEvent[] };
+  onImportData: (data: StoredData) => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onUpdateSettings }) => {
-  
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onUpdateSettings, currentData, onImportData }) => {
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importStatus, setImportStatus] = useState<'idle' | 'confirm' | 'success' | 'error'>('idle');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if(isOpen) {
+        setImportStatus('idle');
+        setImportFile(null);
+    }
+  }, [isOpen]);
+
   const handleFontSizeChange = (size: FontSize) => {
     onUpdateSettings({ ...settings, fontSize: size });
   };
@@ -64,8 +77,63 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
     onUpdateSettings({ ...settings, highContrast: !settings.highContrast });
   };
 
+  // Export Logic
+  const handleExport = () => {
+      const data: StoredData = {
+          roses: currentData.roses,
+          events: currentData.events,
+          settings: settings
+      };
+      const jsonString = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `rosarium_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+  };
+
+  // Import Logic
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+          setImportFile(e.target.files[0]);
+          setImportStatus('confirm');
+      }
+  };
+
+  const executeImport = () => {
+      if (!importFile) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+          try {
+              const content = e.target?.result as string;
+              const parsed = JSON.parse(content);
+              
+              // Basic Validation
+              if (Array.isArray(parsed.roses) && Array.isArray(parsed.events)) {
+                  onImportData(parsed as StoredData);
+                  setImportStatus('success');
+                  setTimeout(() => {
+                      onClose();
+                  }, 1500);
+              } else {
+                  setImportStatus('error');
+              }
+          } catch (err) {
+              console.error(err);
+              setImportStatus('error');
+          }
+      };
+      reader.readAsText(importFile);
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="表示設定">
+    <Modal isOpen={isOpen} onClose={onClose} title="設定とデータ管理">
       <div className="p-6 space-y-8">
         
         {/* Font Size */}
@@ -113,6 +181,83 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
            </div>
         </div>
 
+        {/* Data Management Section */}
+        <div className="pt-4 border-t border-gray-100">
+           <label className="block text-sm font-bold opacity-70 uppercase tracking-wider mb-3">データ管理 (バックアップ)</label>
+           
+           <div className="grid grid-cols-2 gap-3">
+               {/* Export Button */}
+               <button 
+                 onClick={handleExport}
+                 className="flex flex-col items-center justify-center p-4 border border-green-200 bg-green-50 rounded-lg text-green-800 hover:bg-green-100 transition-colors"
+               >
+                   <Download size={20} className="mb-2" />
+                   <span className="text-sm font-bold">保存 (Export)</span>
+                   <span className="text-[10px] opacity-70 mt-1">現在のデータをファイルへ</span>
+               </button>
+
+               {/* Import Button */}
+               <button 
+                 onClick={() => fileInputRef.current?.click()}
+                 className="flex flex-col items-center justify-center p-4 border border-gray-200 bg-white rounded-lg text-gray-600 hover:bg-gray-50 transition-colors relative overflow-hidden"
+               >
+                   <Upload size={20} className="mb-2" />
+                   <span className="text-sm font-bold">読み込み (Import)</span>
+                   <span className="text-[10px] opacity-70 mt-1">バックアップから復元</span>
+                   <input 
+                        type="file" 
+                        accept=".json" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        onChange={handleFileSelect}
+                    />
+               </button>
+           </div>
+           
+           {/* Import Confirmation / Status Area */}
+           {importStatus === 'confirm' && importFile && (
+               <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg animate-fade-in">
+                   <div className="flex items-start gap-3">
+                       <AlertTriangle className="text-orange-500 shrink-0 mt-0.5" size={18} />
+                       <div>
+                           <h4 className="font-bold text-orange-900 text-sm mb-1">データを上書きしますか？</h4>
+                           <p className="text-xs text-orange-800 mb-2">
+                               「{importFile.name}」を読み込むと、現在のデータはすべて失われ、バックアップの内容に置き換わります。
+                           </p>
+                           <div className="flex gap-2 mt-3">
+                               <button 
+                                 onClick={() => { setImportStatus('idle'); setImportFile(null); }}
+                                 className="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded text-xs font-bold"
+                               >
+                                   キャンセル
+                               </button>
+                               <button 
+                                 onClick={executeImport}
+                                 className="px-3 py-1.5 bg-orange-600 text-white rounded text-xs font-bold shadow-sm"
+                               >
+                                   実行する
+                               </button>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+           )}
+
+            {importStatus === 'success' && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-800 animate-fade-in">
+                    <Check size={18} />
+                    <span className="text-sm font-bold">復元しました！</span>
+                </div>
+            )}
+            
+            {importStatus === 'error' && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-800 animate-fade-in">
+                    <AlertTriangle size={18} />
+                    <span className="text-sm font-bold">読み込みに失敗しました (形式エラー)</span>
+                </div>
+            )}
+        </div>
+
         {/* Explicit Save Button */}
         <div className="pt-6 border-t border-gray-100">
            <button 
@@ -120,7 +265,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
              className="w-full py-3 bg-green-700 text-white rounded-lg hover:bg-green-800 flex items-center justify-center space-x-2 transition-colors shadow-md"
            >
              <Save size={18} />
-             <span className="font-bold">設定を保存する</span>
+             <span className="font-bold">設定を閉じる</span>
            </button>
         </div>
 
@@ -743,7 +888,7 @@ export const CareModal: React.FC<CareModalProps> = ({
                                     <span className="text-[9px] text-gray-400">撮影/選択</span>
                                 </>
                             )}
-                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, true)} />
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, true)} />
                         </label>
                     </div>
                     {/* After Photo */}
@@ -758,7 +903,7 @@ export const CareModal: React.FC<CareModalProps> = ({
                                     <span className="text-[9px] text-gray-400">撮影/選択</span>
                                 </>
                             )}
-                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, false)} />
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, false)} />
                         </label>
                     </div>
                 </div>

@@ -78,6 +78,13 @@ export interface AppSettings {
   highContrast: boolean; // True = Black text, False = Default design
 }
 
+// Storage Schema
+export interface StoredData {
+  roses: Rose[];
+  events: CareEvent[];
+  settings: AppSettings;
+}
+
 // --- Database Types ---
 
 export interface RoseDefinition {
