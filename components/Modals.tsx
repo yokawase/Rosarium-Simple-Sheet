@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, Pencil, Trash2, Camera, Upload, Settings, Save, Check, Search, ChevronDown, ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import { Rose, BrandData, CareType, CareEvent, AppSettings, FontSize, RoseDefinition, ProductDefinition, SoilMixComponent, PotChangeDetail } from '../types';
 import { BRAND_MASTER, CARE_TYPES, ROSE_LIBRARY, PRODUCT_LIBRARY, SOIL_LIBRARY } from '../constants';
+
+// --- Icon Helper ---
+const IconComponent = ({ name, className, color, size = 16 }: { name: string, className?: string, color?: string, size?: number }) => {
+    const Icon = (Icons as any)[name] || Icons.HelpCircle;
+    return <Icon className={className} size={size} stroke={color} strokeWidth={2} />;
+};
 
 // --- Reusable Modal Wrapper ---
 interface ModalProps {
@@ -521,10 +528,7 @@ export const CareModal: React.FC<CareModalProps> = ({
               }`}
               title={type.label}
             >
-             {type.iconName === 'Layers' ? <Settings size={14} /> : 
-              type.iconName === 'Move' ? <ArrowRight size={14} className="rotate-45" /> :
-              <span className="text-[10px] font-bold">{type.label[0]}</span>
-             }
+             <IconComponent name={type.iconName} size={14} color="white" />
             </button>
           ))}
         </div>
@@ -753,12 +757,13 @@ export const CareModal: React.FC<CareModalProps> = ({
                     className={`flex justify-between items-center p-2.5 bg-white border rounded-md transition-all group shadow-sm cursor-pointer ${isBeingEdited ? 'border-orange-400 ring-1 ring-orange-400 bg-orange-50' : 'border-gray-100 hover:border-green-300 hover:shadow-md'}`}
                >
                  <div className="flex items-center space-x-3 flex-1">
-                   <span className="font-serif font-bold opacity-60 w-6 text-right text-lg">{dayStr}</span>
-                   <div 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: indicatorColor }}
-                   ></div>
-                   <div className="flex flex-col flex-1">
+                   {/* Date Stamp Preview in List */}
+                   <div className="flex flex-col items-center justify-center w-8 h-9 rounded bg-white border shadow-sm" style={{ borderColor: indicatorColor }}>
+                       <span className="text-[10px] font-bold leading-none mb-0.5" style={{ color: indicatorColor }}>{dayStr}</span>
+                       <IconComponent name={type?.iconName || ''} size={14} color={indicatorColor} />
+                   </div>
+
+                   <div className="flex flex-col flex-1 pl-2">
                         <span className="text-sm font-medium">{type?.label}</span>
                         {prod && <span className="text-[10px] text-gray-500">{prod.name}</span>}
                         {/* Detail View for Pot Change */}

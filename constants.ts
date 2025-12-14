@@ -66,12 +66,12 @@ export const BRAND_MASTER: Record<string, BrandData> = {
 
 export const CARE_TYPES: CareType[] = [
   { id: 'pruning', label: '剪定', color: '#22c55e', bgColor: 'bg-green-500', iconName: 'Scissors' },
-  { id: 'repot', label: '鉢替え', color: '#fb923c', bgColor: 'bg-orange-400', iconName: 'Move' },
-  { id: 'soil', label: '用土替え', color: '#854d0e', bgColor: 'bg-amber-700', iconName: 'Layers' },
+  { id: 'repot', label: '鉢替え', color: '#fb923c', bgColor: 'bg-orange-400', iconName: 'Sprout' },
+  { id: 'soil', label: '用土替え', color: '#854d0e', bgColor: 'bg-amber-700', iconName: 'Shovel' },
   { id: 'liquid', label: '液肥', color: '#a855f7', bgColor: 'bg-purple-500', iconName: 'Droplet' },
-  { id: 'solid', label: '置肥', color: '#3b82f6', bgColor: 'bg-blue-500', iconName: 'CircleDot' },
+  { id: 'solid', label: '置肥', color: '#3b82f6', bgColor: 'bg-blue-500', iconName: 'Hexagon' },
   { id: 'vital', label: '活力剤', color: '#f472b6', bgColor: 'bg-pink-400', iconName: 'Sparkles' },
-  { id: 'pest', label: '殺虫/殺菌', color: '#facc15', bgColor: 'bg-yellow-400', iconName: 'BugOff' },
+  { id: 'pest', label: '殺虫/殺菌', color: '#facc15', bgColor: 'bg-yellow-400', iconName: 'ShieldCheck' },
   { id: 'blooming', label: '開花', color: '#ef4444', bgColor: 'bg-red-500', iconName: 'Flower2' },
 ];
 

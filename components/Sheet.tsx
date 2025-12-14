@@ -11,9 +11,9 @@ interface SheetProps {
   onOpenCareModal: (year: number, month: number, rose: Rose) => void;
 }
 
-const IconComponent = React.memo(({ name, className, color }: { name: string, className?: string, color?: string }) => {
+const IconComponent = React.memo(({ name, className, color, size = 14 }: { name: string, className?: string, color?: string, size?: number }) => {
   const Icon = (Icons as any)[name] || Icons.HelpCircle;
-  return <Icon className={className} stroke={color} />;
+  return <Icon className={className} size={size} stroke={color} strokeWidth={2.5} />;
 });
 
 export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, onOpenCareModal }) => {
@@ -184,26 +184,34 @@ export const Sheet: React.FC<SheetProps> = ({ roses, events, onOpenRoseModal, on
                           onClick={() => onOpenCareModal(year, month, rose)}
                         >
                           {/* Vertical Column Layout for different types */}
-                          <div className="flex h-full w-full p-1 gap-1 overflow-hidden">
+                          <div className="flex h-full w-full p-1 gap-1 overflow-x-hidden overflow-y-auto custom-scrollbar">
                               {CARE_TYPES.map(type => {
                                   const eventsOfType = groupedEvents[type.id];
                                   if (!eventsOfType || eventsOfType.length === 0) return null;
                                   
                                   // For vertical stacking of specific products
                                   return (
-                                      <div key={type.id} className="flex flex-col gap-1 items-center min-w-[12px]">
-                                          {eventsOfType.map(ev => {
+                                      <div key={type.id} className="flex flex-col gap-1 items-center min-w-[28px]">
+                                          {eventsOfType.sort((a,b) => parseInt(a.date.split('-')[2]) - parseInt(b.date.split('-')[2])).map(ev => {
                                               const prod = ev.productId ? PRODUCT_LIBRARY[ev.productId] : null;
                                               const color = prod ? prod.color : type.color;
-                                              const day = ev.date.split('-')[2];
+                                              const day = parseInt(ev.date.split('-')[2]);
 
                                               return (
                                                   <div 
                                                     key={ev.id} 
-                                                    className="w-3 h-3 rounded-full flex-shrink-0"
-                                                    style={{ backgroundColor: color }}
+                                                    className="flex flex-col items-center justify-center w-7 h-8 rounded bg-white border-2 shadow-sm mb-1 transition-transform hover:scale-105"
+                                                    style={{ borderColor: color }}
                                                     title={`${day}日: ${prod ? prod.name : type.label}`}
-                                                  />
+                                                  >
+                                                      <span 
+                                                        className="text-[9px] font-bold leading-none mb-0.5" 
+                                                        style={{ color: color, fontFamily: '"Cormorant Garamond", serif' }}
+                                                      >
+                                                        {day}
+                                                      </span>
+                                                      <IconComponent name={type.iconName} color={color} size={12} />
+                                                  </div>
                                               );
                                           })}
                                       </div>
