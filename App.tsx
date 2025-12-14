@@ -49,8 +49,16 @@ const App: React.FC = () => {
   // Save on change
   useEffect(() => {
     if (!dataLoaded) return; // Don't save before initial load finishes
-    const data: StoredData = { roses, events, settings };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    try {
+      const data: StoredData = { roses, events, settings };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.error("Storage failed", e);
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+          // Alert user carefully (using native alert might interrupt flow, but here it's critical)
+          alert("保存容量の上限を超えました。これ以上データを保存できません。\n不要な画像を削除するか、データをエクスポートして整理してください。");
+      }
+    }
   }, [roses, events, settings, dataLoaded]);
 
   

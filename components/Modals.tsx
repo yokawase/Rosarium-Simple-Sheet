@@ -10,6 +10,50 @@ const IconComponent = ({ name, className, color, size = 16 }: { name: string, cl
     return <Icon className={className} size={size} stroke={color} strokeWidth={2} />;
 };
 
+// --- Image Compression Helper ---
+const compressImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX_WIDTH = 1024; // Limit width
+        const MAX_HEIGHT = 1024; // Limit height
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            // Compress to JPEG with 0.6 quality
+            resolve(canvas.toDataURL('image/jpeg', 0.6));
+        } else {
+            reject(new Error("Failed to get canvas context"));
+        }
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 // --- Reusable Modal Wrapper ---
 interface ModalProps {
   isOpen: boolean;
@@ -555,15 +599,17 @@ export const CareModal: React.FC<CareModalProps> = ({
       }
   }, [selectedType, editingId]); // Added editingId to dependency to ensure correct evaluation
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isBefore: boolean) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isBefore: boolean) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (isBefore) setBeforeImage(reader.result as string);
-        else setAfterImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedDataUrl = await compressImage(file);
+        if (isBefore) setBeforeImage(compressedDataUrl);
+        else setAfterImage(compressedDataUrl);
+      } catch (error) {
+        console.error("Image compression error:", error);
+        alert("画像の処理に失敗しました。");
+      }
     }
   };
 
